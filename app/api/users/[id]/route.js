@@ -9,7 +9,7 @@ export async function PUT(req, { params }) {
   const body = await req.json();
   const data = {};
   if (body.name) data.name = body.name;
-  if (body.role && ['sales', 'manager', 'admin'].includes(body.role)) data.role = body.role;
+  if (body.role && ['sales', 'manager', 'admin', 'operation'].includes(body.role)) data.role = body.role;
   if (body.password) data.password = await bcrypt.hash(body.password, 10);
   const updated = await prisma.user.update({ where: { id: params.id }, data });
   return NextResponse.json({ id: updated.id, username: updated.username, name: updated.name, role: updated.role });

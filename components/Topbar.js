@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 
-const ROLE_LABEL = { sales: 'Sales', manager: 'Manager', admin: 'Admin' };
+const ROLE_LABEL = { sales: 'Sales', operation: 'Operation', manager: 'Manager', admin: 'Admin' };
 
 export default function Topbar({ user }) {
   const pathname = usePathname();
@@ -16,6 +16,7 @@ export default function Topbar({ user }) {
       <div className="topnav">
         <Link href="/dashboard"><button className={isActive('/dashboard')}>Dashboard</button></Link>
         <Link href="/quotes/new"><button className={isActive('/quotes/new')}>Tạo báo giá</button></Link>
+        <Link href="/quotes/template"><button className={isActive('/quotes/template')}>Quote theo mẫu</button></Link>
         {(user.role === 'manager' || user.role === 'admin') && (
           <Link href="/approvals"><button className={isActive('/approvals')}>Duyệt báo giá</button></Link>
         )}

@@ -86,8 +86,8 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser }) {
   const isApproved = q.status === 'approved';
   // General booking info stays locked after approval unless you're Admin.
   const readonly = isApproved && currentUser.role !== 'admin';
-  // Fee tables (buying/selling/other costs) can still be adjusted by Admin or Manager after approval.
-  const feesReadonly = isApproved && currentUser.role !== 'admin' && currentUser.role !== 'manager';
+  // Fee tables (buying/selling/other costs) can still be adjusted by Admin, Manager, or Operation after approval.
+  const feesReadonly = isApproved && !['admin', 'manager', 'operation'].includes(currentUser.role);
   const canAdjustFees = isApproved && !feesReadonly;
   const r = useMemo(() => calcQuote(q), [q]);
 

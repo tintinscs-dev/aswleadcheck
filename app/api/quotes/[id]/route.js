@@ -28,8 +28,8 @@ export async function PUT(req, { params }) {
   const existing = await loadQuote(params.id, user);
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
   if (existing === 'forbidden') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  if (existing.status === 'approved' && user.role !== 'admin' && user.role !== 'manager') {
-    return NextResponse.json({ error: 'Báo giá đã duyệt — chỉ Admin/Manager được điều chỉnh phí.' }, { status: 403 });
+  if (existing.status === 'approved' && !['admin', 'manager', 'operation'].includes(user.role)) {
+    return NextResponse.json({ error: 'Báo giá đã duyệt — chỉ Admin/Manager/Operation được điều chỉnh phí.' }, { status: 403 });
   }
 
   const body = await req.json();
