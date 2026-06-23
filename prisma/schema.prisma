@@ -1,0 +1,66 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  name      String
+  role      String   // sales | manager | admin
+  createdAt DateTime @default(now())
+  quotes    Quote[]
+}
+
+model Quote {
+  id                  String   @id @default(cuid())
+  no                  String?
+  dep                 String?  @default("FES")
+  keys                String?
+  shpr                String?
+  cnee                String?
+  agent               String?
+  pol                 String?
+  pod                 String?
+  pickup              String?
+  delivery            String?
+  term                String?
+  etd                 String?
+  eta                 String?
+  lineCoLoader        String?
+  qty20               Float    @default(0)
+  qty40               Float    @default(0)
+  lcl                 Float    @default(0)
+  weight              Float    @default(0)
+  sales               String?
+  exchangeRate        Float    @default(23300)
+  interestRatePct     Float    @default(7.5)
+  creditDays0         Float    @default(0)
+  creditDaysLCC       Float    @default(0)
+  creditDaysCusTruck  Float    @default(0)
+  cuocCont            Float    @default(0)
+  creditDaysCuocCont  Float    @default(0)
+  chiHoKhac           Float    @default(0)
+  creditDaysChiHoKhac Float    @default(0)
+  cpKhac              Float    @default(0)
+  buying              Json
+  selling             Json
+  status              String   @default("draft") // draft|pending|approved|rejected
+  history             Json     @default("[]")
+  createdById         String
+  createdBy           User     @relation(fields: [createdById], references: [id])
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Settings {
+  id              Int   @id @default(1)
+  exchangeRate    Float @default(23300)
+  interestRatePct Float @default(7.5)
+  cpqlPct         Float @default(3)
+}
