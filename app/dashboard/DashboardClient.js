@@ -1,13 +1,29 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { MODES, MODE_LABELS, calcQuote, quoteModes, fmt, statusLabel } from '../../lib/calc';
 
 const PORTS = ['Hồ Chí Minh', 'Hải Phòng', 'Đà Nẵng', 'Vũng Tàu', 'Hà Nội'];
 
 export default function DashboardClient({ quotes, user }) {
+  const router = useRouter();
+  const [copyingId, setCopyingId] = useState(null);
   const [filters, setFilters] = useState({ mode: '', status: '', sales: '', pol: '', pod: '', search: '' });
+
+  async function copyQuote(id) {
+    setCopyingId(id);
+    try {
+      const res = await fetch(`/api/quotes/${id}/duplicate`, { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Sao chép thất bại.');
+      router.push(`/quotes/${body.id}`);
+    } catch (e) {
+      alert(e.message);
+      setCopyingId(null);
+    }
+  }
   const [chartReady, setChartReady] = useState(false);
   const modeChartRef = useRef(null), statusChartRef = useRef(null), salesChartRef = useRef(null);
   const chartInstances = useRef({});
@@ -149,6 +165,9 @@ export default function DashboardClient({ quotes, user }) {
                   <td>
                     <Link href={`/quotes/${q.id}/view`}><button className="btn btn-outline btn-sm">Xem</button></Link>
                     {canEdit && <Link href={`/quotes/${q.id}`}><button className="btn btn-outline btn-sm">{q.status === 'approved' ? 'Điều chỉnh phí' : 'Sửa'}</button></Link>}
+                    <button className="btn btn-outline btn-sm" disabled={copyingId === q.id} onClick={() => copyQuote(q.id)} title="Sao chép báo giá này để nhập lô hàng tương tự">
+                      {copyingId === q.id ? '…' : '⧉ Copy'}
+                    </button>
                   </td>
                 </tr>
               );

@@ -7,6 +7,7 @@ import { calcQuote, statusLabel } from '../../../../lib/calc';
 import { SummaryInner } from '../../QuoteForm';
 import ReadOnlyItems from './ReadOnlyItems';
 import ApproveBox from './ApproveBox';
+import CopyButton from './CopyButton';
 
 export default async function QuoteViewPage({ params }) {
   const session = await getServerSession(authOptions);
@@ -29,7 +30,13 @@ export default async function QuoteViewPage({ params }) {
       <Topbar user={user} />
       <div className="page">
         <h2>Báo giá {q.no || q.id} <span className={`badge badge-${q.status}`}>{statusLabel(q.status)}</span></h2>
-        <div className="pagesub">{q.shpr || ''} → {q.cnee || ''} &nbsp;|&nbsp; {q.pol} → {q.pod} &nbsp;|&nbsp; Sales: {q.sales || '-'}</div>
+        <div className="pagesub">
+          {[
+            (q.shpr || q.cnee) && [q.shpr, q.cnee].filter(Boolean).join(' → '),
+            (q.pol || q.pod) && [q.pol, q.pod].filter(Boolean).join(' → '),
+            `Sales: ${q.sales || '-'}`,
+          ].filter(Boolean).join('  |  ')}
+        </div>
         <div className="layout-form">
           <div>
             <div className="card">
@@ -74,8 +81,15 @@ export default async function QuoteViewPage({ params }) {
         </div>
         <div className="actions-row">
           <a className="btn btn-outline" href="/dashboard">← Quay lại Dashboard</a>
+          <CopyButton quoteId={q.id} />
+        </div>
+        <div className="actions-row">
           <a className="btn btn-primary" href={`/api/quotes/${q.id}/export`}>⬇ Xuất Excel báo giá này</a>
           <a className="btn btn-primary" href={`/api/quotes/${q.id}/pdf`}>⬇ Xuất PDF Costing/Selling</a>
+        </div>
+        <div className="actions-row">
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf`}>🖨 In báo giá (PDF)</a>
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel`}>🖨 In báo giá (Excel)</a>
         </div>
       </div>
     </div>

@@ -34,7 +34,7 @@ export async function PUT(req, { params }) {
 
   const body = await req.json();
   const history = Array.isArray(existing.history) ? existing.history : [];
-  const { id, createdAt, updatedAt, createdBy, createdById, adjustmentComment, ...rest } = body;
+  const { id, createdAt, updatedAt, createdBy, createdById, adjustmentComment, targetStatus: _targetStatus, ...rest } = body;
 
   let targetStatus;
   if (existing.status === 'approved') {
@@ -57,8 +57,13 @@ export async function PUT(req, { params }) {
 
   const data = { ...rest, status: targetStatus, history };
 
-  const quote = await prisma.quote.update({ where: { id: params.id }, data });
-  return NextResponse.json(quote);
+  try {
+    const quote = await prisma.quote.update({ where: { id: params.id }, data });
+    return NextResponse.json(quote);
+  } catch (e) {
+    console.error('PUT /api/quotes/[id] failed:', e);
+    return NextResponse.json({ error: 'Lưu thất bại — lỗi hệ thống khi cập nhật dữ liệu.' }, { status: 500 });
+  }
 }
 
 export async function DELETE(req, { params }) {

@@ -16,7 +16,6 @@ export default function Topbar({ user }) {
       <div className="topnav">
         <Link href="/dashboard"><button className={isActive('/dashboard')}>Dashboard</button></Link>
         <Link href="/quotes/new"><button className={isActive('/quotes/new')}>Tạo báo giá</button></Link>
-        <Link href="/quotes/template"><button className={isActive('/quotes/template')}>Quote theo mẫu</button></Link>
         {(user.role === 'manager' || user.role === 'admin') && (
           <Link href="/approvals"><button className={isActive('/approvals')}>Duyệt báo giá</button></Link>
         )}
