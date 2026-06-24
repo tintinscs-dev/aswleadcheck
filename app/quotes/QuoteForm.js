@@ -9,6 +9,15 @@ import {
 const TERMS = ['CIF', 'CNF', 'FOB', 'EXW'];
 const PORTS = ['Hồ Chí Minh', 'Hải Phòng', 'Đà Nẵng', 'Vũng Tàu', 'Hà Nội'];
 
+const DEP_OPTIONS = [
+  { value: 'FES', label: 'Xuất hàng đường biển' },
+  { value: 'FEA', label: 'Xuất hàng đường hàng không' },
+  { value: 'FIS', label: 'Nhập hàng đường biển' },
+  { value: 'FIA', label: 'Nhập hàng đường hàng không' },
+  { value: 'OTHER', label: 'Khác (nhập tay)' },
+];
+const DEP_KNOWN_VALUES = DEP_OPTIONS.map(o => o.value).filter(v => v !== 'OTHER');
+
 function setPath(obj, path, val) {
   const parts = path.split('.');
   const next = structuredClone(obj);
@@ -149,9 +158,29 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser }) {
             <div className="grid grid-4">
               <div className="field"><label>Số booking (No.)</label><input value={q.no || ''} onChange={e => setField('no', e.target.value)} disabled={readonly} /></div>
               <div className="field"><label>Loại dịch vụ (DEP.)</label>
-                <select value={q.dep || 'FES'} onChange={e => setField('dep', e.target.value)} disabled={readonly}>
-                  {['FES', 'FEA', 'FIA', 'FIS'].map(d => <option key={d}>{d}</option>)}
-                </select>
+                {(() => {
+                  const depSelectValue = DEP_KNOWN_VALUES.includes(q.dep) ? q.dep : (q.dep ? 'OTHER' : 'FES');
+                  return (
+                    <>
+                      <select
+                        value={depSelectValue}
+                        onChange={e => setField('dep', e.target.value === 'OTHER' ? '' : e.target.value)}
+                        disabled={readonly}
+                      >
+                        {DEP_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                      {depSelectValue === 'OTHER' && (
+                        <input
+                          style={{ marginTop: 6 }}
+                          placeholder="Nhập loại dịch vụ"
+                          value={q.dep || ''}
+                          onChange={e => setField('dep', e.target.value)}
+                          disabled={readonly}
+                        />
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               <div className="field"><label>Keys</label><input value={q.keys || ''} onChange={e => setField('keys', e.target.value)} disabled={readonly} /></div>
               <div className="field"><label>Sales</label><input value={q.sales || ''} onChange={e => setField('sales', e.target.value)} disabled={readonly} /></div>
