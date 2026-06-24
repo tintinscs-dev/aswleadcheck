@@ -20,14 +20,23 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const res = await signIn('credentials', { username, password, redirect: false });
-    setLoading(false);
-    if (res?.error) {
-      setError('Sai tên đăng nhập hoặc mật khẩu.');
-      return;
+    try {
+      const res = await signIn('credentials', { username, password, redirect: false });
+      if (res?.error) {
+        setError('Sai tên đăng nhập hoặc mật khẩu.');
+        return;
+      }
+      if (!res?.ok) {
+        setError('Đăng nhập thất bại — không nhận được phản hồi từ server. Vui lòng thử lại.');
+        return;
+      }
+      router.push('/dashboard');
+      router.refresh();
+    } catch (err) {
+      setError('Lỗi kết nối tới server — vui lòng kiểm tra mạng và thử lại. (' + (err?.message || 'unknown') + ')');
+    } finally {
+      setLoading(false);
     }
-    router.push('/dashboard');
-    router.refresh();
   }
 
   return (
