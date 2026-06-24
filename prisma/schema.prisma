@@ -34,6 +34,7 @@ model Quote {
   etd                 String?
   eta                 String?
   lineCoLoader        String?
+  validDays           Float    @default(30)
   qty20               Float    @default(0)
   qty40               Float    @default(0)
   lcl                 Float    @default(0)

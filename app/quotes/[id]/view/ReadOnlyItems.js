@@ -14,19 +14,30 @@ function Row({ label, item, qty, sign }) {
   );
 }
 
+function isZeroItem(item) {
+  return !Number(item?.flat || 0) && !Number(item?.perUnit || 0);
+}
+
 function CostTable({ side, mode, q }) {
   const data = q[side][mode];
   const qty = qtyForMode(mode, { qty20: q.qty20, qty40: q.qty40, lcl: q.lcl, weight: q.weight });
   const unit = MODE_UNIT[mode];
+  const comlineItem = { flat: 0, perUnit: data.comline.perUnit, tax: data.comline.tax, currency: data.comline.currency };
+  const rows = [
+    ...ITEM_DEFS.map(d => ({ key: d.key, label: d.label, item: data[d.key], sign: +1 })),
+    ...(side === 'buying'
+      ? [{ key: 'comline', label: COMLINE_DEF.label, item: comlineItem, sign: -1 }]
+      : SELL_COM_DEFS.map(d => ({ key: d.key, label: d.label, item: data[d.key], sign: -1 }))),
+    ...(data.customItems || []).map((ci, idx) => ({ key: `custom-${idx}`, label: ci.label || '(Hạng mục tự thêm)', item: ci, sign: +1 })),
+  ].filter(r => !isZeroItem(r.item));
+  if (!rows.length) {
+    return <div className="custom-item-note">Không có chi phí nào được nhập.</div>;
+  }
   return (
     <table className="item-table">
       <thead><tr><th style={{ width: '28%' }}>Hạng mục</th><th>Flat</th><th>Đơn giá {unit}</th><th>VAT/CK%</th><th>Tiền</th><th>Thành tiền</th></tr></thead>
       <tbody>
-        {ITEM_DEFS.map(d => <Row key={d.key} label={d.label} item={data[d.key]} qty={qty} sign={+1} />)}
-        {side === 'buying'
-          ? <Row label={COMLINE_DEF.label} item={{ flat: 0, perUnit: data.comline.perUnit, tax: data.comline.tax, currency: data.comline.currency }} qty={qty} sign={-1} />
-          : SELL_COM_DEFS.map(d => <Row key={d.key} label={d.label} item={data[d.key]} qty={qty} sign={-1} />)}
-        {(data.customItems || []).map((ci, idx) => <Row key={idx} label={ci.label || '(Hạng mục tự thêm)'} item={ci} qty={qty} sign={+1} />)}
+        {rows.map(r => <Row key={r.key} label={r.label} item={r.item} qty={qty} sign={r.sign} />)}
       </tbody>
     </table>
   );

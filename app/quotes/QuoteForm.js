@@ -222,6 +222,7 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser }) {
               <div className="field"><label>ETD</label><input type="date" value={q.etd || ''} onChange={e => setField('etd', e.target.value)} disabled={readonly} /></div>
               <div className="field"><label>ETA</label><input type="date" value={q.eta || ''} onChange={e => setField('eta', e.target.value)} disabled={readonly} /></div>
               <div className="field"><label>Line / Co-loader</label><input value={q.lineCoLoader || ''} onChange={e => setField('lineCoLoader', e.target.value)} disabled={readonly} /></div>
+              <div className="field"><label>Valid (số ngày hiệu lực báo giá)</label><input type="number" min="1" value={q.validDays ?? 30} onChange={e => setField('validDays', Number(e.target.value) || 30)} disabled={readonly} /></div>
             </div>
             <div className="grid grid-4">
               <div className="field"><label>Số lượng 20&apos;</label><input type="number" value={q.qty20 || 0} onChange={e => setField('qty20', Number(e.target.value) || 0)} disabled={readonly} /></div>

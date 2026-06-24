@@ -47,6 +47,7 @@ export default async function QuoteViewPage({ params }) {
                 <div><b>Term:</b> {q.term}</div><div><b>ETD:</b> {q.etd || '-'}</div><div><b>ETA:</b> {q.eta || '-'}</div>
                 <div><b>20&apos;:</b> {q.qty20}</div><div><b>40&apos;:</b> {q.qty40}</div><div><b>LCL/CBM:</b> {q.lcl}</div>
                 <div><b>Weight (kg):</b> {q.weight}</div><div><b>Agent:</b> {q.agent || '-'}</div><div><b>Line:</b> {q.lineCoLoader || '-'}</div>
+                <div><b>Valid:</b> {q.validDays ?? 30} ngày kể từ ngày phát hành</div>
               </div>
             </div>
             <h3 style={{ margin: '18px 0 8px' }}>Chi tiết các hạng mục đã nhập</h3>
@@ -87,7 +88,6 @@ export default async function QuoteViewPage({ params }) {
           {canDelete && <DeleteButton quoteId={q.id} quoteNo={q.no} />}
         </div>
         <div className="actions-row">
-          <a className="btn btn-primary" href={`/api/quotes/${q.id}/export`}>⬇ Xuất Excel báo giá này</a>
           <a className="btn btn-primary" href={`/api/quotes/${q.id}/pdf`}>⬇ Xuất PDF Costing/Selling</a>
         </div>
         <div className="actions-row">
