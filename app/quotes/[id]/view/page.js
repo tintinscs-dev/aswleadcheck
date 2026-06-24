@@ -8,6 +8,7 @@ import { SummaryInner } from '../../QuoteForm';
 import ReadOnlyItems from './ReadOnlyItems';
 import ApproveBox from './ApproveBox';
 import CopyButton from './CopyButton';
+import DeleteButton from './DeleteButton';
 
 export default async function QuoteViewPage({ params }) {
   const session = await getServerSession(authOptions);
@@ -22,6 +23,7 @@ export default async function QuoteViewPage({ params }) {
   const r = calcQuote(q);
   const canApprove = (user.role === 'manager' || user.role === 'admin') && q.status === 'pending';
   const canAdjustFees = q.status === 'approved' && (user.role === 'admin' || user.role === 'manager');
+  const canDelete = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
   const history = Array.isArray(q.history) ? q.history.slice().reverse() : [];
   const ACTION_LABELS = { submitted: 'GỬI DUYỆT', approved: 'ĐÃ DUYỆT', rejected: 'TỪ CHỐI', adjusted: 'ĐIỀU CHỈNH PHÍ' };
 
@@ -82,6 +84,7 @@ export default async function QuoteViewPage({ params }) {
         <div className="actions-row">
           <a className="btn btn-outline" href="/dashboard">← Quay lại Dashboard</a>
           <CopyButton quoteId={q.id} />
+          {canDelete && <DeleteButton quoteId={q.id} quoteNo={q.no} />}
         </div>
         <div className="actions-row">
           <a className="btn btn-primary" href={`/api/quotes/${q.id}/export`}>⬇ Xuất Excel báo giá này</a>

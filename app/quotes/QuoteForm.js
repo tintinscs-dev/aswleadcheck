@@ -3,8 +3,16 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   MODES, MODE_LABELS, MODE_UNIT, ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS,
-  calcQuote, blankCustomItem, newQuoteData, fmt,
+  calcQuote, blankCustomItem, newQuoteData, fmt, CURRENCIES, DEFAULT_CURRENCY,
 } from '../../lib/calc';
+
+function CurrencySelect({ value, onChange }) {
+  return (
+    <select className="currency-select" value={value || DEFAULT_CURRENCY} onChange={e => onChange(e.target.value)} title="Đơn vị tiền tệ của dòng này">
+      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+    </select>
+  );
+}
 
 const TERMS = ['CIF', 'CNF', 'FOB', 'EXW'];
 const PORTS = ['Hồ Chí Minh', 'Hải Phòng', 'Đà Nẵng', 'Vũng Tàu', 'Hà Nội'];
@@ -38,6 +46,7 @@ function ItemRow({ pathPrefix, def, item, onChange }) {
         ? <td><input type="number" step="0.01" value={item.perUnit || 0} onChange={e => onChange(`${pathPrefix}.perUnit`, Number(e.target.value) || 0)} /></td>
         : <td>—</td>}
       <td><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${pathPrefix}.tax`, Number(e.target.value) || 0)} /></td>
+      <td><CurrencySelect value={item.currency} onChange={v => onChange(`${pathPrefix}.currency`, v)} /></td>
     </tr>
   );
 }
@@ -49,8 +58,9 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
       <td className="item-name"><input type="text" placeholder="Tên hạng mục..." value={item.label || ''} onChange={e => onChange(`${p}.label`, e.target.value)} /></td>
       <td><input type="number" step="0.01" value={item.flat || 0} onChange={e => onChange(`${p}.flat`, Number(e.target.value) || 0)} /></td>
       <td><input type="number" step="0.01" value={item.perUnit || 0} onChange={e => onChange(`${p}.perUnit`, Number(e.target.value) || 0)} /></td>
+      <td><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
       <td style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-        <input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} style={{ flex: 1 }} />
+        <CurrencySelect value={item.currency} onChange={v => onChange(`${p}.currency`, v)} />
         <button type="button" title="Xóa hạng mục" onClick={onRemove}>✕</button>
       </td>
     </tr>
@@ -63,13 +73,14 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom }
   return (
     <>
       <table className="item-table">
-        <thead><tr><th style={{ width: '34%' }}>Hạng mục</th><th>Flat (/SHPT)</th><th>Đơn giá {unit}</th><th>{side === 'buying' ? 'VAT %' : 'VAT% / Chiết khấu%'}</th></tr></thead>
+        <thead><tr><th style={{ width: '30%' }}>Hạng mục</th><th>Flat (/SHPT)</th><th>Đơn giá {unit}</th><th>{side === 'buying' ? 'VAT %' : 'VAT% / Chiết khấu%'}</th><th>Tiền</th></tr></thead>
         <tbody>
           {ITEM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`${side}.${mode}.${d.key}`} def={d} item={data[d.key]} onChange={onChange} />)}
           {side === 'buying' ? (
             <tr><td className="item-name">{COMLINE_DEF.label}</td><td>—</td>
               <td><input type="number" step="0.01" value={data.comline.perUnit || 0} onChange={e => onChange(`buying.${mode}.comline.perUnit`, Number(e.target.value) || 0)} /></td>
-              <td><input type="number" step="0.1" value={data.comline.tax || 0} onChange={e => onChange(`buying.${mode}.comline.tax`, Number(e.target.value) || 0)} /></td></tr>
+              <td><input type="number" step="0.1" value={data.comline.tax || 0} onChange={e => onChange(`buying.${mode}.comline.tax`, Number(e.target.value) || 0)} /></td>
+              <td><CurrencySelect value={data.comline.currency} onChange={v => onChange(`buying.${mode}.comline.currency`, v)} /></td></tr>
           ) : SELL_COM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`selling.${mode}.${d.key}`} def={d} item={data[d.key]} onChange={onChange} />)}
           {(data.customItems || []).map((ci, idx) => (
             <CustomItemRow key={idx} side={side} mode={mode} idx={idx} item={ci} onChange={onChange} onRemove={() => onRemoveCustom(side, mode, idx)} />

@@ -14,7 +14,7 @@ export async function GET(req, { params }) {
   if (user.role === 'sales' && quote.createdById !== user.id) return new Response('forbidden', { status: 403 });
 
   const t = quoteToFormalTemplate(quote);
-  const buffer = buildTemplateWorkbook(t, { formal: true, salesName: quote.sales || user.name });
+  const buffer = await buildTemplateWorkbook(t, { formal: true, salesName: quote.sales || user.name });
 
   return new Response(buffer, {
     headers: {

@@ -10,6 +10,8 @@ const PORTS = ['Hồ Chí Minh', 'Hải Phòng', 'Đà Nẵng', 'Vũng Tàu', 'H
 export default function DashboardClient({ quotes, user }) {
   const router = useRouter();
   const [copyingId, setCopyingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [localQuotes, setLocalQuotes] = useState(quotes);
   const [filters, setFilters] = useState({ mode: '', status: '', sales: '', pol: '', pod: '', search: '' });
 
   async function copyQuote(id) {
@@ -24,13 +26,28 @@ export default function DashboardClient({ quotes, user }) {
       setCopyingId(null);
     }
   }
+
+  async function deleteQuote(id, no) {
+    if (!confirm(`Xoá báo giá ${no || ''} (bản nháp)? Hành động này không thể hoàn tác.`)) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/quotes/${id}`, { method: 'DELETE' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Xoá thất bại.');
+      setLocalQuotes(qs => qs.filter(q => q.id !== id));
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
   const [chartReady, setChartReady] = useState(false);
   const modeChartRef = useRef(null), statusChartRef = useRef(null), salesChartRef = useRef(null);
   const chartInstances = useRef({});
 
-  const salesNames = useMemo(() => [...new Set(quotes.map(q => q.sales).filter(Boolean))], [quotes]);
+  const salesNames = useMemo(() => [...new Set(localQuotes.map(q => q.sales).filter(Boolean))], [localQuotes]);
 
-  const filtered = useMemo(() => quotes.filter(q => {
+  const filtered = useMemo(() => localQuotes.filter(q => {
     if (filters.mode && !quoteModes(q).includes(filters.mode)) return false;
     if (filters.status && q.status !== filters.status) return false;
     if (filters.sales && q.sales !== filters.sales) return false;
@@ -42,7 +59,7 @@ export default function DashboardClient({ quotes, user }) {
       if (!hay.includes(s)) return false;
     }
     return true;
-  }), [quotes, filters]);
+  }), [localQuotes, filters]);
 
   const totalKQKD = filtered.reduce((a, q) => a + calcQuote(q).KQKD, 0);
   const pending = filtered.filter(q => q.status === 'pending').length;
@@ -152,6 +169,7 @@ export default function DashboardClient({ quotes, user }) {
               const r = calcQuote(q);
               const canEdit = ((q.status === 'draft' || q.status === 'rejected') && (user.role === 'admin' || q.createdById === user.id))
                 || (q.status === 'approved' && (user.role === 'admin' || user.role === 'manager'));
+              const canDelete = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
               return (
                 <tr key={q.id}>
                   <td>{q.no || '-'}</td>
@@ -168,6 +186,11 @@ export default function DashboardClient({ quotes, user }) {
                     <button className="btn btn-outline btn-sm" disabled={copyingId === q.id} onClick={() => copyQuote(q.id)} title="Sao chép báo giá này để nhập lô hàng tương tự">
                       {copyingId === q.id ? '…' : '⧉ Copy'}
                     </button>
+                    {canDelete && (
+                      <button className="btn btn-outline btn-sm" style={{ color: 'var(--danger)' }} disabled={deletingId === q.id} onClick={() => deleteQuote(q.id, q.no)} title="Xoá báo giá nháp này">
+                        {deletingId === q.id ? '…' : '🗑 Xoá'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

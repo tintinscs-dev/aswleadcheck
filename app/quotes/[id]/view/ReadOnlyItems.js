@@ -1,4 +1,4 @@
-import { ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS, MODE_UNIT, MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt } from '../../../../lib/calc';
+import { ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS, MODE_UNIT, MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency } from '../../../../lib/calc';
 
 function Row({ label, item, qty, sign }) {
   const total = lineTotal(item, qty, sign);
@@ -8,6 +8,7 @@ function Row({ label, item, qty, sign }) {
       <td>{fmt(item.flat || 0)}</td>
       <td>{fmt(item.perUnit || 0)}</td>
       <td>{fmt(item.tax || 0)}%</td>
+      <td>{itemCurrency(item)}</td>
       <td className="v">{fmt(total)}</td>
     </tr>
   );
@@ -19,11 +20,11 @@ function CostTable({ side, mode, q }) {
   const unit = MODE_UNIT[mode];
   return (
     <table className="item-table">
-      <thead><tr><th style={{ width: '30%' }}>Hạng mục</th><th>Flat</th><th>Đơn giá {unit}</th><th>VAT/CK%</th><th>Thành tiền</th></tr></thead>
+      <thead><tr><th style={{ width: '28%' }}>Hạng mục</th><th>Flat</th><th>Đơn giá {unit}</th><th>VAT/CK%</th><th>Tiền</th><th>Thành tiền</th></tr></thead>
       <tbody>
         {ITEM_DEFS.map(d => <Row key={d.key} label={d.label} item={data[d.key]} qty={qty} sign={+1} />)}
         {side === 'buying'
-          ? <Row label={COMLINE_DEF.label} item={{ flat: 0, perUnit: data.comline.perUnit, tax: data.comline.tax }} qty={qty} sign={-1} />
+          ? <Row label={COMLINE_DEF.label} item={{ flat: 0, perUnit: data.comline.perUnit, tax: data.comline.tax, currency: data.comline.currency }} qty={qty} sign={-1} />
           : SELL_COM_DEFS.map(d => <Row key={d.key} label={d.label} item={data[d.key]} qty={qty} sign={-1} />)}
         {(data.customItems || []).map((ci, idx) => <Row key={idx} label={ci.label || '(Hạng mục tự thêm)'} item={ci} qty={qty} sign={+1} />)}
       </tbody>

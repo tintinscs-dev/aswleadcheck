@@ -5,7 +5,7 @@ export async function POST(req) {
   const user = await requireUser();
   if (!user) return new Response('unauthorized', { status: 401 });
   const template = await req.json();
-  const buffer = buildTemplateWorkbook(template);
+  const buffer = await buildTemplateWorkbook(template);
   return new Response(buffer, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
