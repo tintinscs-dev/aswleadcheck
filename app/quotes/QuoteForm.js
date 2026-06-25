@@ -101,7 +101,7 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, 
   return (
     <>
       <table className="item-table">
-        <thead><tr><th style={{ width: '30%' }}>Hạng mục</th><th>Flat (/SHPT)</th><th>Đơn giá {unit}</th><th>{side === 'buying' ? 'VAT %' : 'VAT% / Chiết khấu%'}</th><th>Tiền</th></tr></thead>
+        <thead><tr><th style={{ width: '28%' }}>Hạng mục</th><th>Flat (/SHPT)</th><th>Đơn giá {unit}</th><th>{side === 'buying' ? 'VAT %' : 'VAT% / Chiết khấu%'}</th><th style={{ width: 76 }}>Tiền</th></tr></thead>
         <tbody>
           {ITEM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`${side}.${mode}.${d.key}`} def={d} item={data[d.key]} onChange={onChange} disabled={disabled} />)}
           {side === 'buying' ? (
