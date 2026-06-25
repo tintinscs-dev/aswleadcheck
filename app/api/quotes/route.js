@@ -41,6 +41,11 @@ export async function POST(req) {
   const data = { ...base, ...body, fxRates, exchangeRate, createdById: user.id, status: 'draft', history: [] };
   delete data.id;
 
-  const quote = await prisma.quote.create({ data });
-  return NextResponse.json(quote);
+  try {
+    const quote = await prisma.quote.create({ data });
+    return NextResponse.json(quote);
+  } catch (e) {
+    console.error('POST /api/quotes failed:', e);
+    return NextResponse.json({ error: 'Tạo báo giá thất bại — lỗi hệ thống khi lưu dữ liệu.' }, { status: 500 });
+  }
 }

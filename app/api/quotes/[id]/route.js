@@ -61,7 +61,13 @@ export async function PUT(req, { params }) {
       });
     }
   } else {
-    targetStatus = body.targetStatus || existing.status;
+    // Only 'draft' / 'pending' are legal self-service transitions here — a
+    // quote becomes 'approved'/'rejected' exclusively through the dedicated
+    // /approve route, which enforces the manager/admin role check. Without
+    // this whitelist a sales user could PUT { targetStatus: 'approved' }
+    // directly and self-approve their own quote.
+    const requested = _targetStatus;
+    targetStatus = ['draft', 'pending'].includes(requested) ? requested : existing.status;
     if (targetStatus === 'pending' && existing.status !== 'pending') {
       history.push({ by: user.name, role: user.role, action: 'submitted', comment: 'Gửi duyệt', date: new Date().toISOString() });
     }
