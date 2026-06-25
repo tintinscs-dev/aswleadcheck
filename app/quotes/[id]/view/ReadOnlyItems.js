@@ -19,15 +19,16 @@ function isZeroItem(item) {
 }
 
 function CostTable({ side, mode, q }) {
-  const data = q[side][mode];
+  const data = q[side]?.[mode] || {};
   const qty = qtyForMode(mode, { qty20: q.qty20, qty40: q.qty40, lcl: q.lcl, weight: q.weight });
   const unit = MODE_UNIT[mode];
-  const comlineItem = { flat: 0, perUnit: data.comline.perUnit, tax: data.comline.tax, currency: data.comline.currency };
+  const comlineSrc = data.comline || {};
+  const comlineItem = { flat: 0, perUnit: comlineSrc.perUnit, tax: comlineSrc.tax, currency: comlineSrc.currency };
   const rows = [
-    ...ITEM_DEFS.map(d => ({ key: d.key, label: d.label, item: data[d.key], sign: +1 })),
+    ...ITEM_DEFS.map(d => ({ key: d.key, label: d.label, item: data[d.key] || {}, sign: +1 })),
     ...(side === 'buying'
       ? [{ key: 'comline', label: COMLINE_DEF.label, item: comlineItem, sign: -1 }]
-      : SELL_COM_DEFS.map(d => ({ key: d.key, label: d.label, item: data[d.key], sign: -1 }))),
+      : SELL_COM_DEFS.map(d => ({ key: d.key, label: d.label, item: data[d.key] || {}, sign: -1 }))),
     ...(data.customItems || []).map((ci, idx) => ({ key: `custom-${idx}`, label: ci.label || '(Hạng mục tự thêm)', item: ci, sign: +1 })),
   ].filter(r => !isZeroItem(r.item));
   if (!rows.length) {
