@@ -52,6 +52,7 @@ model Quote {
   cpKhac              Float    @default(0)
   buying              Json
   selling             Json
+  fxRates             Json     @default("{}") // snapshot of system FX rates (non-USD -> USD) at last save
   status              String   @default("draft") // draft|pending|approved|rejected
   history             Json     @default("[]")
   createdById         String
@@ -61,8 +62,11 @@ model Quote {
 }
 
 model Settings {
-  id              Int   @id @default(1)
-  exchangeRate    Float @default(23300)
-  interestRatePct Float @default(7.5)
-  cpqlPct         Float @default(3)
+  id              Int       @id @default(1)
+  exchangeRate    Float     @default(23300)
+  interestRatePct Float     @default(7.5)
+  cpqlPct         Float     @default(3)
+  fxRates         Json      @default("{}") // { VND, EUR, GBP, SGD, CNY, HKD } -> giá trị 1 đơn vị quy đổi sang USD
+  fxUpdatedAt     DateTime?
+  fxUpdatedBy     String?
 }

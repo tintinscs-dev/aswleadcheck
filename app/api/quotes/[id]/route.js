@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db';
 import { requireUser } from '../../../../lib/serverAuth';
 import { diffQuoteCosts } from '../../../../lib/diff';
+import { DEFAULT_FX_RATES } from '../../../../lib/calc';
+
+// Snapshot the current shared FX rate table into the quote on every save — see
+// the matching helper/comment in app/api/quotes/route.js.
+async function currentFxRates() {
+  try {
+    const settings = await prisma.settings.findUnique({ where: { id: 1 } });
+    return { ...DEFAULT_FX_RATES, ...(settings?.fxRates || {}) };
+  } catch (e) {
+    return DEFAULT_FX_RATES;
+  }
+}
 
 async function loadQuote(id, user) {
   const quote = await prisma.quote.findUnique({
@@ -55,7 +67,8 @@ export async function PUT(req, { params }) {
     }
   }
 
-  const data = { ...rest, status: targetStatus, history };
+  const fxRates = await currentFxRates();
+  const data = { ...rest, fxRates, status: targetStatus, history };
 
   try {
     const quote = await prisma.quote.update({ where: { id: params.id }, data });
