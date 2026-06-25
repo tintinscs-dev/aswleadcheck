@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db';
 import { requireUser } from '../../../../lib/serverAuth';
 import { diffQuoteCosts } from '../../../../lib/diff';
-import { DEFAULT_FX_RATES } from '../../../../lib/calc';
+import { DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../../lib/calc';
 
 // Snapshot the current shared FX rate table into the quote on every save — see
 // the matching helper/comment in app/api/quotes/route.js.
@@ -68,7 +68,8 @@ export async function PUT(req, { params }) {
   }
 
   const fxRates = await currentFxRates();
-  const data = { ...rest, fxRates, status: targetStatus, history };
+  const exchangeRate = usdVndRateFromFx(fxRates);
+  const data = { ...rest, fxRates, exchangeRate, status: targetStatus, history };
 
   try {
     const quote = await prisma.quote.update({ where: { id: params.id }, data });

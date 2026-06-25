@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import {
   MODES, MODE_LABELS, MODE_UNIT, ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS,
   calcQuote, blankCustomItem, newQuoteData, fmt, CURRENCIES, DEFAULT_CURRENCY,
+  usdVndRateFromFx, DEFAULT_FX_RATES,
 } from '../../lib/calc';
 
 function CurrencySelect({ value, onChange }) {
@@ -11,6 +12,33 @@ function CurrencySelect({ value, onChange }) {
     <select className="currency-select" value={value || DEFAULT_CURRENCY} onChange={e => onChange(e.target.value)} title="Đơn vị tiền tệ của dòng này">
       {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
     </select>
+  );
+}
+
+// Plain number while focused (easy to type), comma-separated thousands once
+// you click away — used for every money field (giá cả/chi phí) for readability.
+function formatMoney(v) {
+  const n = Number(v) || 0;
+  return n === 0 ? '' : n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+function parseMoney(s) {
+  const cleaned = String(s).replace(/,/g, '').trim();
+  const n = Number(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+function MoneyInput({ value, onChange, disabled }) {
+  const [focused, setFocused] = useState(false);
+  const display = focused ? (value || value === 0 ? String(value) : '') : formatMoney(value);
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={display}
+      disabled={disabled}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onChange={e => onChange(parseMoney(e.target.value))}
+    />
   );
 }
 
@@ -35,17 +63,17 @@ function setPath(obj, path, val) {
   return next;
 }
 
-function ItemRow({ pathPrefix, def, item, onChange }) {
+function ItemRow({ pathPrefix, def, item, onChange, disabled }) {
   return (
     <tr>
       <td className="item-name">{def.label}</td>
       {def.flat
-        ? <td><input type="number" step="0.01" value={item.flat || 0} onChange={e => onChange(`${pathPrefix}.flat`, Number(e.target.value) || 0)} /></td>
+        ? <td><MoneyInput value={item.flat || 0} disabled={disabled} onChange={v => onChange(`${pathPrefix}.flat`, v)} /></td>
         : <td>—</td>}
       {def.perUnit
-        ? <td><input type="number" step="0.01" value={item.perUnit || 0} onChange={e => onChange(`${pathPrefix}.perUnit`, Number(e.target.value) || 0)} /></td>
+        ? <td><MoneyInput value={item.perUnit || 0} disabled={disabled} onChange={v => onChange(`${pathPrefix}.perUnit`, v)} /></td>
         : <td>—</td>}
-      <td><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${pathPrefix}.tax`, Number(e.target.value) || 0)} /></td>
+      <td><input type="number" step="0.1" value={item.tax || 0} disabled={disabled} onChange={e => onChange(`${pathPrefix}.tax`, Number(e.target.value) || 0)} /></td>
       <td><CurrencySelect value={item.currency} onChange={v => onChange(`${pathPrefix}.currency`, v)} /></td>
     </tr>
   );
@@ -56,8 +84,8 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
   return (
     <tr className="custom-item-row">
       <td className="item-name"><input type="text" placeholder="Tên hạng mục..." value={item.label || ''} onChange={e => onChange(`${p}.label`, e.target.value)} /></td>
-      <td><input type="number" step="0.01" value={item.flat || 0} onChange={e => onChange(`${p}.flat`, Number(e.target.value) || 0)} /></td>
-      <td><input type="number" step="0.01" value={item.perUnit || 0} onChange={e => onChange(`${p}.perUnit`, Number(e.target.value) || 0)} /></td>
+      <td><MoneyInput value={item.flat || 0} onChange={v => onChange(`${p}.flat`, v)} /></td>
+      <td><MoneyInput value={item.perUnit || 0} onChange={v => onChange(`${p}.perUnit`, v)} /></td>
       <td><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
       <td style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         <CurrencySelect value={item.currency} onChange={v => onChange(`${p}.currency`, v)} />
@@ -67,7 +95,7 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
   );
 }
 
-function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom }) {
+function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, disabled }) {
   const data = q[side][mode];
   const unit = MODE_UNIT[mode];
   return (
@@ -75,13 +103,13 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom }
       <table className="item-table">
         <thead><tr><th style={{ width: '30%' }}>Hạng mục</th><th>Flat (/SHPT)</th><th>Đơn giá {unit}</th><th>{side === 'buying' ? 'VAT %' : 'VAT% / Chiết khấu%'}</th><th>Tiền</th></tr></thead>
         <tbody>
-          {ITEM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`${side}.${mode}.${d.key}`} def={d} item={data[d.key]} onChange={onChange} />)}
+          {ITEM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`${side}.${mode}.${d.key}`} def={d} item={data[d.key]} onChange={onChange} disabled={disabled} />)}
           {side === 'buying' ? (
             <tr><td className="item-name">{COMLINE_DEF.label}</td><td>—</td>
-              <td><input type="number" step="0.01" value={data.comline.perUnit || 0} onChange={e => onChange(`buying.${mode}.comline.perUnit`, Number(e.target.value) || 0)} /></td>
-              <td><input type="number" step="0.1" value={data.comline.tax || 0} onChange={e => onChange(`buying.${mode}.comline.tax`, Number(e.target.value) || 0)} /></td>
+              <td><MoneyInput value={data.comline.perUnit || 0} disabled={disabled} onChange={v => onChange(`buying.${mode}.comline.perUnit`, v)} /></td>
+              <td><input type="number" step="0.1" value={data.comline.tax || 0} disabled={disabled} onChange={e => onChange(`buying.${mode}.comline.tax`, Number(e.target.value) || 0)} /></td>
               <td><CurrencySelect value={data.comline.currency} onChange={v => onChange(`buying.${mode}.comline.currency`, v)} /></td></tr>
-          ) : SELL_COM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`selling.${mode}.${d.key}`} def={d} item={data[d.key]} onChange={onChange} />)}
+          ) : SELL_COM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`selling.${mode}.${d.key}`} def={d} item={data[d.key]} onChange={onChange} disabled={disabled} />)}
           {(data.customItems || []).map((ci, idx) => (
             <CustomItemRow key={idx} side={side} mode={mode} idx={idx} item={ci} onChange={onChange} onRemove={() => onRemoveCustom(side, mode, idx)} />
           ))}
@@ -93,11 +121,13 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom }
   );
 }
 
-export default function QuoteForm({ initialQuote, quoteId, currentUser }) {
+export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFxRates }) {
   const router = useRouter();
   const [q, setQ] = useState(() => initialQuote || newQuoteData());
-  const [tabGroup, setTabGroup] = useState('buying');
   const [tabMode, setTabMode] = useState('fcl20');
+  // Tỷ giá VND/USD hiển thị trong Công nợ/Chi phí khác không còn nhập tay —
+  // luôn lấy theo bảng tỷ giá chung (trang Tỷ giá), tự cập nhật khi tỷ giá đổi.
+  const liveExchangeRate = usdVndRateFromFx(systemFxRates || q.fxRates || DEFAULT_FX_RATES);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [adjustmentComment, setAdjustmentComment] = useState('');
@@ -234,42 +264,50 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser }) {
 
           <div className="card">
             <div className="tabs">
-              <button type="button" className={tabGroup === 'buying' ? 'active' : ''} onClick={() => setTabGroup('buying')}>II. GIÁ MUA (COST)</button>
-              <button type="button" className={tabGroup === 'selling' ? 'active' : ''} onClick={() => setTabGroup('selling')}>III. GIÁ BÁN (SELL)</button>
-              <button type="button" className={tabGroup === 'other' ? 'active' : ''} onClick={() => setTabGroup('other')}>IV. CÔNG NỢ / CHI PHÍ KHÁC</button>
+              {MODES.map(m => <button type="button" key={m} className={tabMode === m ? 'active' : ''} onClick={() => setTabMode(m)}>{MODE_LABELS[m]}</button>)}
             </div>
-            {tabGroup !== 'other' ? (
-              <>
-                <div className="tabs" style={{ borderBottom: '1px solid var(--border)' }}>
-                  {MODES.map(m => <button type="button" key={m} className={tabMode === m ? 'active' : ''} onClick={() => setTabMode(m)}>{MODE_LABELS[m]}</button>)}
-                </div>
+            <div className="grid-buysell">
+              <div>
+                <h3>II. GIÁ MUA (COST)</h3>
                 <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                  <ModeItemsTable side={tabGroup} mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} />
+                  <ModeItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} />
                 </fieldset>
-              </>
-            ) : (
-              <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                <div className="grid grid-2">
-                  <div className="field"><label>Tỷ giá (VND/USD)</label><input type="number" value={q.exchangeRate || 0} onChange={e => setField('exchangeRate', Number(e.target.value) || 0)} /></div>
-                  <div className="field"><label>Lãi suất NH (%/năm)</label><input type="number" step="0.1" value={q.interestRatePct || 0} onChange={e => setField('interestRatePct', Number(e.target.value) || 0)} /></div>
+              </div>
+              <div>
+                <h3>III. GIÁ BÁN (SELL)</h3>
+                <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                  <ModeItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} />
+                </fieldset>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h3>IV. CÔNG NỢ / CHI PHÍ KHÁC</h3>
+            <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+              <div className="grid grid-2">
+                <div className="field">
+                  <label>Tỷ giá (VND/USD)</label>
+                  <input type="text" value={fmt(liveExchangeRate)} disabled readOnly title="Lấy theo bảng tỷ giá chung (trang Tỷ giá) — không nhập tay." />
                 </div>
-                <div className="grid grid-3">
-                  <div className="field"><label>Số ngày nợ — CPCN 0% (OVERSEAS/O&#47;F)</label><input type="number" value={q.creditDays0 || 0} onChange={e => setField('creditDays0', Number(e.target.value) || 0)} /></div>
-                  <div className="field"><label>Số ngày nợ — CPCN LCC 8%</label><input type="number" value={q.creditDaysLCC || 0} onChange={e => setField('creditDaysLCC', Number(e.target.value) || 0)} /></div>
-                  <div className="field"><label>Số ngày nợ — CPCN CUS+TRUCKING</label><input type="number" value={q.creditDaysCusTruck || 0} onChange={e => setField('creditDaysCusTruck', Number(e.target.value) || 0)} /></div>
-                </div>
-                <div className="grid grid-2">
-                  <div className="field"><label>Cược container (USD)</label><input type="number" value={q.cuocCont || 0} onChange={e => setField('cuocCont', Number(e.target.value) || 0)} /></div>
-                  <div className="field"><label>Số ngày nợ cược cont</label><input type="number" value={q.creditDaysCuocCont || 0} onChange={e => setField('creditDaysCuocCont', Number(e.target.value) || 0)} /></div>
-                </div>
-                <div className="grid grid-2">
-                  <div className="field"><label>Chi hộ khác (USD)</label><input type="number" value={q.chiHoKhac || 0} onChange={e => setField('chiHoKhac', Number(e.target.value) || 0)} /></div>
-                  <div className="field"><label>Số ngày nợ chi hộ khác</label><input type="number" value={q.creditDaysChiHoKhac || 0} onChange={e => setField('creditDaysChiHoKhac', Number(e.target.value) || 0)} /></div>
-                </div>
-                <div className="field"><label>CP Khác (USD)</label><input type="number" value={q.cpKhac || 0} onChange={e => setField('cpKhac', Number(e.target.value) || 0)} /></div>
-                <p className="helptext">CPCN = doanh thu liên quan × lãi suất NH × số ngày nợ / 365. Cược cont &amp; Chi hộ khác chỉ tính phần lãi tài chính, không trừ phần gốc (đã thu lại từ khách).</p>
-              </fieldset>
-            )}
+                <div className="field"><label>Lãi suất NH (%/năm)</label><input type="number" step="0.1" value={q.interestRatePct || 0} onChange={e => setField('interestRatePct', Number(e.target.value) || 0)} /></div>
+              </div>
+              <div className="grid grid-3">
+                <div className="field"><label>Số ngày nợ — CPCN 0% (OVERSEAS/O&#47;F)</label><input type="number" value={q.creditDays0 || 0} onChange={e => setField('creditDays0', Number(e.target.value) || 0)} /></div>
+                <div className="field"><label>Số ngày nợ — CPCN LCC 8%</label><input type="number" value={q.creditDaysLCC || 0} onChange={e => setField('creditDaysLCC', Number(e.target.value) || 0)} /></div>
+                <div className="field"><label>Số ngày nợ — CPCN CUS+TRUCKING</label><input type="number" value={q.creditDaysCusTruck || 0} onChange={e => setField('creditDaysCusTruck', Number(e.target.value) || 0)} /></div>
+              </div>
+              <div className="grid grid-2">
+                <div className="field"><label>Cược container (USD)</label><MoneyInput value={q.cuocCont || 0} onChange={v => setField('cuocCont', v)} /></div>
+                <div className="field"><label>Số ngày nợ cược cont</label><input type="number" value={q.creditDaysCuocCont || 0} onChange={e => setField('creditDaysCuocCont', Number(e.target.value) || 0)} /></div>
+              </div>
+              <div className="grid grid-2">
+                <div className="field"><label>Chi hộ khác (USD)</label><MoneyInput value={q.chiHoKhac || 0} onChange={v => setField('chiHoKhac', v)} /></div>
+                <div className="field"><label>Số ngày nợ chi hộ khác</label><input type="number" value={q.creditDaysChiHoKhac || 0} onChange={e => setField('creditDaysChiHoKhac', Number(e.target.value) || 0)} /></div>
+              </div>
+              <div className="field"><label>CP Khác (USD)</label><MoneyInput value={q.cpKhac || 0} onChange={v => setField('cpKhac', v)} /></div>
+              <p className="helptext">CPCN = doanh thu liên quan × lãi suất NH × số ngày nợ / 365. Cược cont &amp; Chi hộ khác chỉ tính phần lãi tài chính, không trừ phần gốc (đã thu lại từ khách).</p>
+            </fieldset>
           </div>
 
           {canAdjustFees && (
