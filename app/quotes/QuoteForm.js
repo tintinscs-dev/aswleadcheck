@@ -15,6 +15,20 @@ function CurrencySelect({ value, onChange }) {
   );
 }
 
+// Format a JS Date as YYYY-MM-DD (the value format required by <input type="date">).
+function toDateInput(d) { return d.toISOString().split('T')[0]; }
+// Compute the expiry date string from the quote's base date + validDays.
+function expiryDateInput(createdAt, validDays) {
+  const base = createdAt ? new Date(createdAt) : new Date();
+  return toDateInput(new Date(base.getTime() + (Number(validDays) || 30) * 86400000));
+}
+// Convert a chosen expiry date back to validDays (min 1) relative to base.
+function expiryToValidDays(dateStr, createdAt) {
+  const base = createdAt ? new Date(createdAt) : new Date();
+  const selected = new Date(dateStr);
+  return Math.max(1, Math.round((selected - base) / 86400000));
+}
+
 // Plain number while focused (easy to type), comma-separated thousands once
 // you click away — used for every money field (giá cả/chi phí) for readability.
 function formatMoney(v) {
@@ -252,7 +266,7 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
               <div className="field"><label>ETD</label><input type="date" value={q.etd || ''} onChange={e => setField('etd', e.target.value)} disabled={readonly} /></div>
               <div className="field"><label>ETA</label><input type="date" value={q.eta || ''} onChange={e => setField('eta', e.target.value)} disabled={readonly} /></div>
               <div className="field"><label>Line / Co-loader</label><input value={q.lineCoLoader || ''} onChange={e => setField('lineCoLoader', e.target.value)} disabled={readonly} /></div>
-              <div className="field"><label>Valid (số ngày hiệu lực báo giá)</label><input type="number" min="1" value={q.validDays ?? 30} onChange={e => setField('validDays', Number(e.target.value) || 30)} disabled={readonly} /></div>
+              <div className="field"><label>Hết hiệu lực</label><input type="date" value={expiryDateInput(q.createdAt, q.validDays)} onChange={e => setField('validDays', expiryToValidDays(e.target.value, q.createdAt))} disabled={readonly} /></div>
             </div>
             <div className="grid grid-4">
               <div className="field"><label>Số lượng 20&apos;</label><input type="number" value={q.qty20 || 0} onChange={e => setField('qty20', Number(e.target.value) || 0)} disabled={readonly} /></div>
