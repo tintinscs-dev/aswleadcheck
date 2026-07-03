@@ -143,6 +143,7 @@ function ItemRow({ mode, side, pathPrefix, def, item, onChange, disabled }) {
       <td><UnitSelect mode={mode} value={item.unit} disabled={disabled} onChange={v => onChange(`${pathPrefix}.unit`, v)} /></td>
       <td><input type="number" step="0.1" value={item.tax || 0} disabled={disabled} onChange={e => onChange(`${pathPrefix}.tax`, Number(e.target.value) || 0)} /></td>
       <td><CurrencySelect value={item.currency} onChange={v => onChange(`${pathPrefix}.currency`, v)} /></td>
+      <td><input type="text" placeholder="Ghi chú..." value={item.note || ''} disabled={disabled} onChange={e => onChange(`${pathPrefix}.note`, e.target.value)} /></td>
     </tr>
   );
 }
@@ -159,6 +160,7 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
         <CurrencySelect value={item.currency} onChange={v => onChange(`${p}.currency`, v)} />
         <button type="button" title="Xóa hạng mục" onClick={onRemove}>✕</button>
       </td>
+      <td><input type="text" placeholder="Ghi chú..." value={item.note || ''} onChange={e => onChange(`${p}.note`, e.target.value)} /></td>
     </tr>
   );
 }
@@ -170,11 +172,12 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, 
     <>
       <table className="item-table">
         <thead><tr>
-          <th style={{ width: '30%' }}>{t('table.col.item')}</th>
+          <th style={{ width: '26%' }}>{t('table.col.item')}</th>
           <th>{t('table.col.price')}</th>
-          <th style={{ width: 118 }}>{t('table.col.unit')}</th>
+          <th style={{ width: 110 }}>{t('table.col.unit')}</th>
           <th>{t('table.col.vat')}</th>
-          <th style={{ width: 76 }}>{t('table.col.currency')}</th>
+          <th style={{ width: 70 }}>{t('table.col.currency')}</th>
+          <th style={{ width: '16%' }}>{t('table.col.note')}</th>
         </tr></thead>
         <tbody>
           {defs.map(d => <ItemRow key={d.key} mode={mode} side={side} pathPrefix={`${side}.${mode}.${d.key}`} def={d} item={data[d.key] || {}} onChange={onChange} disabled={disabled} />)}

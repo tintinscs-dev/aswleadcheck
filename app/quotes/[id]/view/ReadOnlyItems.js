@@ -10,6 +10,7 @@ function Row({ label, item, qty }) {
       <td>{fmt(item.tax || 0)}%</td>
       <td>{itemCurrency(item)}</td>
       <td className="v">{fmt(total)}</td>
+      <td>{item.note || ''}</td>
     </tr>
   );
 }
@@ -35,7 +36,7 @@ function CostTable({ side, mode, q }) {
   }
   return (
     <table className="item-table">
-      <thead><tr><th style={{ width: '28%' }}>Hạng mục</th><th>Đơn giá</th><th>Đơn vị tính</th><th>VAT%</th><th>Tiền</th><th>Thành tiền</th></tr></thead>
+      <thead><tr><th style={{ width: '24%' }}>Hạng mục</th><th>Đơn giá</th><th>Đơn vị tính</th><th>VAT%</th><th>Tiền</th><th>Thành tiền</th><th style={{ width: '16%' }}>Ghi chú</th></tr></thead>
       <tbody>
         {rows.map(r => <Row key={r.key} label={r.label} item={r.item} qty={qty} />)}
       </tbody>
