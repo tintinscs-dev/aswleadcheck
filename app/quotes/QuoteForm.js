@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import {
   MODES, MODE_LABELS, MODE_UNIT, ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS,
   calcQuote, blankCustomItem, newQuoteData, fmt, CURRENCIES, DEFAULT_CURRENCY,
-  usdVndRateFromFx, DEFAULT_FX_RATES,
+  usdVndRateFromFx, DEFAULT_FX_RATES, itemDefsForMode, migrateQuote,
 } from '../../lib/calc';
 import { useLang } from '../../components/LangContext';
 
@@ -42,17 +42,21 @@ function parseMoney(s) {
   return isNaN(n) ? 0 : n;
 }
 function MoneyInput({ value, onChange, disabled }) {
-  const [focused, setFocused] = useState(false);
-  const display = focused ? (value || value === 0 ? String(value) : '') : formatMoney(value);
+  // raw = null means "not focused" — display formatted value.
+  // When focused, raw holds exactly what the user is typing (including
+  // trailing dots like "11."), so we never strip the decimal mid-entry.
+  // We only parse → number on blur, avoiding the cursor-jump / dot-loss bug.
+  const [raw, setRaw] = useState(null);
+  const display = raw !== null ? raw : formatMoney(value);
   return (
     <input
       type="text"
       inputMode="decimal"
       value={display}
       disabled={disabled}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      onChange={e => onChange(parseMoney(e.target.value))}
+      onFocus={() => setRaw(value || value === 0 ? String(value) : '')}
+      onBlur={() => { onChange(parseMoney(raw ?? '')); setRaw(null); }}
+      onChange={e => setRaw(e.target.value)}
     />
   );
 }
@@ -111,8 +115,9 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
 }
 
 function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, disabled, t }) {
-  const data = q[side][mode];
+  const data = q[side]?.[mode] || {};
   const unit = MODE_UNIT[mode];
+  const defs = itemDefsForMode(mode);
   return (
     <>
       <table className="item-table">
@@ -124,13 +129,13 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, 
           <th style={{ width: 76 }}>{t('table.col.currency')}</th>
         </tr></thead>
         <tbody>
-          {ITEM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`${side}.${mode}.${d.key}`} def={d} item={data[d.key]} onChange={onChange} disabled={disabled} />)}
+          {defs.map(d => <ItemRow key={d.key} pathPrefix={`${side}.${mode}.${d.key}`} def={d} item={data[d.key] || {}} onChange={onChange} disabled={disabled} />)}
           {side === 'buying' ? (
             <tr><td className="item-name">{COMLINE_DEF.label}</td><td>—</td>
-              <td><MoneyInput value={data.comline.perUnit || 0} disabled={disabled} onChange={v => onChange(`buying.${mode}.comline.perUnit`, v)} /></td>
-              <td><input type="number" step="0.1" value={data.comline.tax || 0} disabled={disabled} onChange={e => onChange(`buying.${mode}.comline.tax`, Number(e.target.value) || 0)} /></td>
-              <td><CurrencySelect value={data.comline.currency} onChange={v => onChange(`buying.${mode}.comline.currency`, v)} /></td></tr>
-          ) : SELL_COM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`selling.${mode}.${d.key}`} def={d} item={data[d.key]} onChange={onChange} disabled={disabled} />)}
+              <td><MoneyInput value={data.comline?.perUnit || 0} disabled={disabled} onChange={v => onChange(`buying.${mode}.comline.perUnit`, v)} /></td>
+              <td><input type="number" step="0.1" value={data.comline?.tax || 0} disabled={disabled} onChange={e => onChange(`buying.${mode}.comline.tax`, Number(e.target.value) || 0)} /></td>
+              <td><CurrencySelect value={data.comline?.currency} onChange={v => onChange(`buying.${mode}.comline.currency`, v)} /></td></tr>
+          ) : SELL_COM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`selling.${mode}.${d.key}`} def={d} item={data[d.key] || {}} onChange={onChange} disabled={disabled} />)}
           {(data.customItems || []).map((ci, idx) => (
             <CustomItemRow key={idx} side={side} mode={mode} idx={idx} item={ci} onChange={onChange} onRemove={() => onRemoveCustom(side, mode, idx)} />
           ))}
@@ -145,7 +150,7 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, 
 export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFxRates }) {
   const router = useRouter();
   const { t } = useLang();
-  const [q, setQ] = useState(() => initialQuote || newQuoteData());
+  const [q, setQ] = useState(() => migrateQuote(initialQuote || newQuoteData()));
   const [tabMode, setTabMode] = useState('fcl20');
   // Tỷ giá VND/USD hiển thị trong Công nợ/Chi phí khác không còn nhập tay —
   // luôn lấy theo bảng tỷ giá chung (trang Tỷ giá), tự cập nhật khi tỷ giá đổi.

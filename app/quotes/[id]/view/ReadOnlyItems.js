@@ -1,4 +1,4 @@
-import { ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS, MODE_UNIT, MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency } from '../../../../lib/calc';
+import { ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS, MODE_UNIT, MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode } from '../../../../lib/calc';
 
 function Row({ label, item, qty, sign }) {
   const total = lineTotal(item, qty, sign);
@@ -25,7 +25,7 @@ function CostTable({ side, mode, q }) {
   const comlineSrc = data.comline || {};
   const comlineItem = { flat: 0, perUnit: comlineSrc.perUnit, tax: comlineSrc.tax, currency: comlineSrc.currency };
   const rows = [
-    ...ITEM_DEFS.map(d => ({ key: d.key, label: d.label, item: data[d.key] || {}, sign: +1 })),
+    ...itemDefsForMode(mode).map(d => ({ key: d.key, label: d.label, item: data[d.key] || {}, sign: +1 })),
     ...(side === 'buying'
       ? [{ key: 'comline', label: COMLINE_DEF.label, item: comlineItem, sign: -1 }]
       : SELL_COM_DEFS.map(d => ({ key: d.key, label: d.label, item: data[d.key] || {}, sign: -1 }))),
