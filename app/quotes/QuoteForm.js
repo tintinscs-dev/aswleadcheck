@@ -92,6 +92,28 @@ const DEP_OPTIONS = [
 ];
 const DEP_KNOWN_VALUES = DEP_OPTIONS.map(o => o.value).filter(v => v !== 'OTHER');
 
+function ExtraTermsEditor({ items, onChange, disabled, t }) {
+  const list = Array.isArray(items) ? items : [];
+  function setLine(idx, val) { onChange(list.map((v, i) => i === idx ? val : v)); }
+  function addLine() { onChange([...list, '']); }
+  function removeLine(idx) { onChange(list.filter((_, i) => i !== idx)); }
+  return (
+    <div className="field">
+      <label>{t('field.extraTerms')}</label>
+      {list.map((line, idx) => (
+        <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+          <input style={{ flex: 1 }} value={line} disabled={disabled}
+            placeholder={t('field.extraTerms.placeholder')}
+            onChange={e => setLine(idx, e.target.value)} />
+          {!disabled && <button type="button" title="Xóa dòng" onClick={() => removeLine(idx)}>✕</button>}
+        </div>
+      ))}
+      {!disabled && <button type="button" className="btn-add-item" onClick={addLine}>{t('field.extraTerms.add')}</button>}
+      <div className="helptext">{t('field.extraTerms.help')}</div>
+    </div>
+  );
+}
+
 function setPath(obj, path, val) {
   const parts = path.split('.');
   const next = structuredClone(obj);
@@ -351,6 +373,9 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
               <div className="field" style={{ gridColumn: '1 / -1' }}>
                 <label>{t('field.notes')}</label>
                 <textarea rows={3} value={q.notes || ''} onChange={e => setField('notes', e.target.value)} disabled={readonly} style={{ width: '100%', resize: 'vertical', maxHeight: 160 }} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <ExtraTermsEditor items={q.extraTerms} onChange={v => setField('extraTerms', v)} disabled={readonly} t={t} />
               </div>
             </div>
           </div>

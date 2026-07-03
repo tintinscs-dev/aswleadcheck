@@ -36,6 +36,7 @@ model Quote {
   lineCoLoader        String?
   pieces              Float    @default(0)  // số kiện hàng
   notes               String?               // ghi chú chung cho báo giá
+  extraTerms          String[] @default([]) // ghi chú thêm riêng cho lô hàng, hiện trong "Điều khoản & Lưu ý" của báo giá in ra
   validDays           Float    @default(30)
   qty20               Float    @default(0)
   qty40               Float    @default(0)

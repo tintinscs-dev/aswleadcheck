@@ -109,6 +109,10 @@ export default function TemplateClient() {
           </div>
         ))}
         <div className="field"><label>Notes / Consignee</label><textarea className="note" value={t.notes || ''} onChange={e => setField('notes', e.target.value)}></textarea></div>
+        <div className="field">
+          <label>Lưu ý riêng cho lô hàng này (mỗi dòng 1 ý, sẽ thêm vào cuối mục &quot;Điều khoản &amp; Lưu ý&quot; khi in)</label>
+          <textarea className="note" value={(t.extraTerms || []).join('\n')} onChange={e => setField('extraTerms', e.target.value.split('\n'))}></textarea>
+        </div>
       </div>
 
       {TEMPLATE_SECTIONS.map(sec => (
