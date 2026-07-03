@@ -1,4 +1,4 @@
-import { ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS, MODE_UNIT, MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode } from '../../../../lib/calc';
+import { ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS, MODE_UNIT, MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode, migrateQuote } from '../../../../lib/calc';
 
 function Row({ label, item, qty, sign }) {
   const total = lineTotal(item, qty, sign);
@@ -19,7 +19,12 @@ function isZeroItem(item) {
 }
 
 function CostTable({ side, mode, q }) {
-  const data = q[side]?.[mode] || {};
+  // Fallback for old quotes: if mode data is empty, try lclair key
+  const modeData = q[side]?.[mode];
+  const data = (modeData && Object.keys(modeData).length > 1 ? modeData : null)
+    || (mode === 'lcl' ? q[side]?.lclair : null)
+    || modeData
+    || {};
   const qty = qtyForMode(mode, { qty20: q.qty20, qty40: q.qty40, lcl: q.lcl, weight: q.weight });
   const unit = MODE_UNIT[mode];
   const comlineSrc = data.comline || {};

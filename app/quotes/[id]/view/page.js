@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/db';
 import Topbar from '../../../../components/Topbar';
-import { calcQuote, statusLabel, expiryDateLabel } from '../../../../lib/calc';
+import { calcQuote, statusLabel, expiryDateLabel, migrateQuote } from '../../../../lib/calc';
 import { SummaryInner } from '../../QuoteForm';
 import ReadOnlyItems from './ReadOnlyItems';
 import ApproveBox from './ApproveBox';
@@ -19,7 +19,7 @@ export default async function QuoteViewPage({ params }) {
   if (!quote) notFound();
   if (user.role === 'sales' && quote.createdById !== user.id) redirect('/dashboard');
 
-  const q = JSON.parse(JSON.stringify(quote));
+  const q = migrateQuote(JSON.parse(JSON.stringify(quote)));
   const r = calcQuote(q);
   const canApprove = (user.role === 'manager' || user.role === 'admin') && q.status === 'pending';
   const canAdjustFees = q.status === 'approved' && (user.role === 'admin' || user.role === 'manager');
