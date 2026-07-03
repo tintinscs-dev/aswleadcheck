@@ -40,7 +40,8 @@ model Quote {
   qty20               Float    @default(0)
   qty40               Float    @default(0)
   lcl                 Float    @default(0)
-  weight              Float    @default(0)
+  weight              Float    @default(0)  // Gross Weight (G.W)
+  cw                  Float    @default(0)  // Chargeable Weight (C.W) — drives Air pricing
   sales               String?
   exchangeRate        Float    @default(23300)
   interestRatePct     Float    @default(7.5)

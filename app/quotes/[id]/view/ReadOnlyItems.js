@@ -1,12 +1,12 @@
-import { ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS, MODE_UNIT, MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode, migrateQuote } from '../../../../lib/calc';
+import { MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode } from '../../../../lib/calc';
 
-function Row({ label, item, qty, sign }) {
-  const total = lineTotal(item, qty, sign);
+function Row({ label, item, qty }) {
+  const total = lineTotal(item, qty, +1);
   return (
     <tr>
       <td className="item-name">{label}</td>
-      <td>{fmt(item.flat || 0)}</td>
-      <td>{fmt(item.perUnit || 0)}</td>
+      <td>{fmt(item.price || 0)}</td>
+      <td>{item.unit || ''}</td>
       <td>{fmt(item.tax || 0)}%</td>
       <td>{itemCurrency(item)}</td>
       <td className="v">{fmt(total)}</td>
@@ -15,7 +15,7 @@ function Row({ label, item, qty, sign }) {
 }
 
 function isZeroItem(item) {
-  return !Number(item?.flat || 0) && !Number(item?.perUnit || 0);
+  return !Number(item?.price || 0);
 }
 
 function CostTable({ side, mode, q }) {
@@ -25,25 +25,19 @@ function CostTable({ side, mode, q }) {
     || (mode === 'lcl' ? q[side]?.lclair : null)
     || modeData
     || {};
-  const qty = qtyForMode(mode, { qty20: q.qty20, qty40: q.qty40, lcl: q.lcl, weight: q.weight });
-  const unit = MODE_UNIT[mode];
-  const comlineSrc = data.comline || {};
-  const comlineItem = { flat: 0, perUnit: comlineSrc.perUnit, tax: comlineSrc.tax, currency: comlineSrc.currency };
+  const qty = qtyForMode(mode, q);
   const rows = [
-    ...itemDefsForMode(mode).map(d => ({ key: d.key, label: d.label, item: data[d.key] || {}, sign: +1 })),
-    ...(side === 'buying'
-      ? [{ key: 'comline', label: COMLINE_DEF.label, item: comlineItem, sign: -1 }]
-      : SELL_COM_DEFS.map(d => ({ key: d.key, label: d.label, item: data[d.key] || {}, sign: -1 }))),
-    ...(data.customItems || []).map((ci, idx) => ({ key: `custom-${idx}`, label: ci.label || '(Hạng mục tự thêm)', item: ci, sign: +1 })),
+    ...itemDefsForMode(mode).map(d => ({ key: d.key, label: d.label, item: data[d.key] || {} })),
+    ...(data.customItems || []).map((ci, idx) => ({ key: `custom-${idx}`, label: ci.label || '(Hạng mục tự thêm)', item: ci })),
   ].filter(r => !isZeroItem(r.item));
   if (!rows.length) {
     return <div className="custom-item-note">Không có chi phí nào được nhập.</div>;
   }
   return (
     <table className="item-table">
-      <thead><tr><th style={{ width: '28%' }}>Hạng mục</th><th>Flat</th><th>Đơn giá {unit}</th><th>VAT/CK%</th><th>Tiền</th><th>Thành tiền</th></tr></thead>
+      <thead><tr><th style={{ width: '28%' }}>Hạng mục</th><th>Đơn giá</th><th>Đơn vị tính</th><th>VAT%</th><th>Tiền</th><th>Thành tiền</th></tr></thead>
       <tbody>
-        {rows.map(r => <Row key={r.key} label={r.label} item={r.item} qty={qty} sign={r.sign} />)}
+        {rows.map(r => <Row key={r.key} label={r.label} item={r.item} qty={qty} />)}
       </tbody>
     </table>
   );

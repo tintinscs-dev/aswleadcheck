@@ -2,9 +2,10 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  MODES, MODE_LABELS, MODE_UNIT, ITEM_DEFS, COMLINE_DEF, SELL_COM_DEFS,
+  MODES, MODE_LABELS, UNIT_OPTIONS_BY_MODE, UNIT_OPTIONS,
   calcQuote, blankCustomItem, newQuoteData, fmt, CURRENCIES, DEFAULT_CURRENCY,
   usdVndRateFromFx, DEFAULT_FX_RATES, itemDefsForMode, migrateQuote,
+  priceSuggestionNote, TARIFF_SUGGEST,
 } from '../../lib/calc';
 import { useLang } from '../../components/LangContext';
 
@@ -12,6 +13,19 @@ function CurrencySelect({ value, onChange }) {
   return (
     <select className="currency-select" value={value || DEFAULT_CURRENCY} onChange={e => onChange(e.target.value)} title="Đơn vị tiền tệ của dòng này">
       {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+    </select>
+  );
+}
+
+function unitOptionsFor(mode, current) {
+  const base = UNIT_OPTIONS_BY_MODE[mode] || UNIT_OPTIONS;
+  return current && !base.includes(current) ? [current, ...base] : base;
+}
+
+function UnitSelect({ mode, value, onChange, disabled }) {
+  return (
+    <select value={value || ''} disabled={disabled} onChange={e => onChange(e.target.value)}>
+      {unitOptionsFor(mode, value).map(u => <option key={u} value={u}>{u}</option>)}
     </select>
   );
 }
@@ -34,7 +48,7 @@ function expiryToValidDays(dateStr, createdAt) {
 // you click away — used for every money field (giá cả/chi phí) for readability.
 function formatMoney(v) {
   const n = Number(v) || 0;
-  return n === 0 ? '' : n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  return n === 0 ? '' : n.toLocaleString('en-US', { maximumFractionDigits: 4 });
 }
 function parseMoney(s) {
   const cleaned = String(s).replace(/,/g, '').trim();
@@ -87,16 +101,24 @@ function setPath(obj, path, val) {
   return next;
 }
 
-function ItemRow({ pathPrefix, def, item, onChange, disabled }) {
+function PriceNote({ note }) {
+  if (!note) return null;
+  const text = note.direction === 'higher'
+    ? `Cao hơn giá đề xuất ${fmt(note.suggestedPrice)} (+${fmt(note.diff)})`
+    : `Thấp hơn giá đề xuất ${fmt(note.suggestedPrice)} (-${fmt(note.diff)})`;
+  return <div className={`price-note ${note.direction === 'higher' ? 'note-up' : 'note-down'}`} title="So với Dữ liệu nội bộ (giá đề xuất)">{text}</div>;
+}
+
+function ItemRow({ mode, side, pathPrefix, def, item, onChange, disabled }) {
+  const note = side === 'selling' ? priceSuggestionNote(mode, def.key, item.price, item.unit) : null;
   return (
     <tr>
       <td className="item-name">{def.label}</td>
-      {def.flat
-        ? <td><MoneyInput value={item.flat || 0} disabled={disabled} onChange={v => onChange(`${pathPrefix}.flat`, v)} /></td>
-        : <td>—</td>}
-      {def.perUnit
-        ? <td><MoneyInput value={item.perUnit || 0} disabled={disabled} onChange={v => onChange(`${pathPrefix}.perUnit`, v)} /></td>
-        : <td>—</td>}
+      <td>
+        <MoneyInput value={item.price || 0} disabled={disabled} onChange={v => onChange(`${pathPrefix}.price`, v)} />
+        <PriceNote note={note} />
+      </td>
+      <td><UnitSelect mode={mode} value={item.unit} disabled={disabled} onChange={v => onChange(`${pathPrefix}.unit`, v)} /></td>
       <td><input type="number" step="0.1" value={item.tax || 0} disabled={disabled} onChange={e => onChange(`${pathPrefix}.tax`, Number(e.target.value) || 0)} /></td>
       <td><CurrencySelect value={item.currency} onChange={v => onChange(`${pathPrefix}.currency`, v)} /></td>
     </tr>
@@ -108,8 +130,8 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
   return (
     <tr className="custom-item-row">
       <td className="item-name"><input type="text" placeholder="Tên hạng mục..." value={item.label || ''} onChange={e => onChange(`${p}.label`, e.target.value)} /></td>
-      <td><MoneyInput value={item.flat || 0} onChange={v => onChange(`${p}.flat`, v)} /></td>
-      <td><MoneyInput value={item.perUnit || 0} onChange={v => onChange(`${p}.perUnit`, v)} /></td>
+      <td><MoneyInput value={item.price || 0} onChange={v => onChange(`${p}.price`, v)} /></td>
+      <td><UnitSelect mode={mode} value={item.unit} onChange={v => onChange(`${p}.unit`, v)} /></td>
       <td><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
       <td style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         <CurrencySelect value={item.currency} onChange={v => onChange(`${p}.currency`, v)} />
@@ -121,26 +143,19 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
 
 function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, disabled, t }) {
   const data = q[side]?.[mode] || {};
-  const unit = MODE_UNIT[mode];
   const defs = itemDefsForMode(mode);
   return (
     <>
       <table className="item-table">
         <thead><tr>
-          <th style={{ width: '28%' }}>{t('table.col.item')}</th>
-          <th>{t('table.col.flat')}</th>
-          <th>{t('table.col.perUnit')} {unit}</th>
-          <th>{side === 'buying' ? t('table.col.vat') : t('table.col.vatDisc')}</th>
+          <th style={{ width: '30%' }}>{t('table.col.item')}</th>
+          <th>{t('table.col.price')}</th>
+          <th style={{ width: 118 }}>{t('table.col.unit')}</th>
+          <th>{t('table.col.vat')}</th>
           <th style={{ width: 76 }}>{t('table.col.currency')}</th>
         </tr></thead>
         <tbody>
-          {defs.map(d => <ItemRow key={d.key} pathPrefix={`${side}.${mode}.${d.key}`} def={d} item={data[d.key] || {}} onChange={onChange} disabled={disabled} />)}
-          {side === 'buying' ? (
-            <tr><td className="item-name">{COMLINE_DEF.label}</td><td>—</td>
-              <td><MoneyInput value={data.comline?.perUnit || 0} disabled={disabled} onChange={v => onChange(`buying.${mode}.comline.perUnit`, v)} /></td>
-              <td><input type="number" step="0.1" value={data.comline?.tax || 0} disabled={disabled} onChange={e => onChange(`buying.${mode}.comline.tax`, Number(e.target.value) || 0)} /></td>
-              <td><CurrencySelect value={data.comline?.currency} onChange={v => onChange(`buying.${mode}.comline.currency`, v)} /></td></tr>
-          ) : SELL_COM_DEFS.map(d => <ItemRow key={d.key} pathPrefix={`selling.${mode}.${d.key}`} def={d} item={data[d.key] || {}} onChange={onChange} disabled={disabled} />)}
+          {defs.map(d => <ItemRow key={d.key} mode={mode} side={side} pathPrefix={`${side}.${mode}.${d.key}`} def={d} item={data[d.key] || {}} onChange={onChange} disabled={disabled} />)}
           {(data.customItems || []).map((ci, idx) => (
             <CustomItemRow key={idx} side={side} mode={mode} idx={idx} item={ci} onChange={onChange} onRemove={() => onRemoveCustom(side, mode, idx)} />
           ))}
@@ -149,6 +164,48 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, 
       <button type="button" className="btn-add-item" onClick={() => onAddCustom(side, mode)}>{t('table.addItem')}</button>
       <div className="custom-item-note">{t('table.customNote')}</div>
     </>
+  );
+}
+
+const INTERNAL_MODE_TITLES = { fcl20: "FCL 20'", fcl40: "FCL 40'", lcl: 'LCL / LCL BCN', air: 'AIR' };
+
+function InternalDataPanel({ t }) {
+  return (
+    <div className="internal-data-panel">
+      <p className="helptext">
+        Dữ liệu nội bộ — bảng giá bán (tariff) đề xuất cho từng hạng mục, tham khảo khi báo giá.
+        Nếu giá nhập ở bảng Giá bán khác với giá đề xuất, hệ thống sẽ hiện dòng nhắc nhở ngay dưới ô nhập.
+      </p>
+      {MODES.map(mode => {
+        const rows = Object.entries(TARIFF_SUGGEST[mode] || {});
+        if (!rows.length) return null;
+        const defs = itemDefsForMode(mode);
+        const labelFor = key => defs.find(d => d.key === key)?.label || key;
+        return (
+          <div className="card" key={mode}>
+            <h4 style={{ marginTop: 0 }}>{INTERNAL_MODE_TITLES[mode]}</h4>
+            <table className="item-table">
+              <thead><tr>
+                <th style={{ width: '40%' }}>Hạng mục</th>
+                <th>Giá đề xuất (USD)</th>
+                <th style={{ width: 118 }}>Đơn vị tính</th>
+                <th>Ghi chú</th>
+              </tr></thead>
+              <tbody>
+                {rows.map(([key, sug]) => (
+                  <tr key={key}>
+                    <td className="item-name">{labelFor(key)}</td>
+                    <td>{sug.price === null ? '—' : fmt(sug.price)}</td>
+                    <td>{sug.unit}</td>
+                    <td className="helptext" style={{ margin: 0 }}>{sug.note || ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -289,10 +346,11 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
               <div className="field"><label>{t('field.qty40')}</label><input type="number" value={q.qty40 || 0} onChange={e => setField('qty40', Number(e.target.value) || 0)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.lcl')}</label><input type="number" step="0.01" value={q.lcl || 0} onChange={e => setField('lcl', Number(e.target.value) || 0)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.weight')}</label><input type="number" step="0.01" value={q.weight || 0} onChange={e => setField('weight', Number(e.target.value) || 0)} disabled={readonly} /></div>
+              <div className="field"><label>{t('field.cw')}</label><input type="number" step="0.01" value={q.cw || 0} onChange={e => setField('cw', Number(e.target.value) || 0)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.pieces')}</label><input type="number" step="1" value={q.pieces || 0} onChange={e => setField('pieces', Number(e.target.value) || 0)} disabled={readonly} /></div>
-              <div className="field" style={{ gridColumn: '2 / -1' }}>
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
                 <label>{t('field.notes')}</label>
-                <textarea rows={1} value={q.notes || ''} onChange={e => setField('notes', e.target.value)} disabled={readonly} style={{ width: '100%', resize: 'vertical', maxHeight: 80 }} />
+                <textarea rows={3} value={q.notes || ''} onChange={e => setField('notes', e.target.value)} disabled={readonly} style={{ width: '100%', resize: 'vertical', maxHeight: 160 }} />
               </div>
             </div>
           </div>
@@ -300,21 +358,26 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
           <div className="card">
             <div className="tabs">
               {MODES.map(m => <button type="button" key={m} className={tabMode === m ? 'active' : ''} onClick={() => setTabMode(m)}>{MODE_LABELS[m]}</button>)}
+              <button type="button" className={tabMode === 'internal' ? 'active' : ''} onClick={() => setTabMode('internal')}>{t('tab.internalData')}</button>
             </div>
-            <div className="grid-buysell">
-              <div>
-                <h3>{t('sec2.title')}</h3>
-                <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                  <ModeItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
-                </fieldset>
+            {tabMode === 'internal' ? (
+              <InternalDataPanel t={t} />
+            ) : (
+              <div className="grid-buysell">
+                <div>
+                  <h3>{t('sec2.title')}</h3>
+                  <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                    <ModeItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
+                  </fieldset>
+                </div>
+                <div>
+                  <h3>{t('sec3.title')}</h3>
+                  <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                    <ModeItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
+                  </fieldset>
+                </div>
               </div>
-              <div>
-                <h3>{t('sec3.title')}</h3>
-                <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                  <ModeItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
-                </fieldset>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="card">

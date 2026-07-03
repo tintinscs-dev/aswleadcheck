@@ -9,7 +9,7 @@ const INFO_FIELDS = [
   ['commodity', 'Commodity', 'pol', 'POL'],
   ['term', 'Term', 'pod', 'POD'],
   ['pickup', 'Pick-up Add', 'volume', 'Volume'],
-  ['dropoff', 'Drop-off Add', 'mode', 'Mode'],
+  ['dropoff', 'Delivery Add', 'mode', 'Mode'],
 ];
 
 async function downloadBlob(url, body, filename) {
