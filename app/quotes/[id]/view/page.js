@@ -44,10 +44,11 @@ export default async function QuoteViewPage({ params }) {
             <div className="card">
               <h3>Thông tin chung</h3>
               <div className="grid grid-3">
-                <div><b>Term:</b> {q.term}</div><div><b>ETD:</b> {q.etd || '-'}</div><div><b>ETA:</b> {q.eta || '-'}</div>
+                <div><b>Term:</b> {q.term || '-'}</div><div><b>ETD:</b> {q.etd || '-'}</div><div><b>ETA:</b> {q.eta || '-'}</div>
                 <div><b>20&apos;:</b> {q.qty20}</div><div><b>40&apos;:</b> {q.qty40}</div><div><b>LCL/CBM:</b> {q.lcl}</div>
                 <div><b>Weight (kg):</b> {q.weight}</div><div><b>Số kiện:</b> {q.pieces || 0} PCS</div><div><b>Agent:</b> {q.agent || '-'}</div>
                 <div><b>Line:</b> {q.lineCoLoader || '-'}</div><div><b>Hết hiệu lực:</b> {expiryDateLabel(q.createdAt, q.validDays)}</div>
+                {q.keys && <div><b>Commodity:</b> {q.keys}</div>}
                 {q.notes && <div style={{ gridColumn: '1 / -1' }}><b>Ghi chú:</b> {q.notes}</div>}
               </div>
             </div>

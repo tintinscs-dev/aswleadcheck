@@ -61,7 +61,12 @@ function MoneyInput({ value, onChange, disabled }) {
   );
 }
 
-const TERMS = ['CIF', 'CNF', 'FOB', 'EXW'];
+const TERMS = [
+  'EXW', 'FCA', 'FAS', 'FOB',
+  'CFR', 'CNF', 'CIF',
+  'CPT', 'CIP',
+  'DAP', 'DPU', 'DDP',
+];
 const PORTS = ['Hồ Chí Minh', 'Hải Phòng', 'Đà Nẵng', 'Vũng Tàu', 'Hà Nội'];
 
 const DEP_OPTIONS = [
@@ -285,10 +290,10 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
               <div className="field"><label>{t('field.lcl')}</label><input type="number" step="0.01" value={q.lcl || 0} onChange={e => setField('lcl', Number(e.target.value) || 0)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.weight')}</label><input type="number" step="0.01" value={q.weight || 0} onChange={e => setField('weight', Number(e.target.value) || 0)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.pieces')}</label><input type="number" step="1" value={q.pieces || 0} onChange={e => setField('pieces', Number(e.target.value) || 0)} disabled={readonly} /></div>
-            </div>
-            <div className="field" style={{ marginTop: 10 }}>
-              <label>{t('field.notes')}</label>
-              <textarea rows={2} value={q.notes || ''} onChange={e => setField('notes', e.target.value)} disabled={readonly} style={{ width: '100%', resize: 'vertical' }} />
+              <div className="field" style={{ gridColumn: '2 / -1' }}>
+                <label>{t('field.notes')}</label>
+                <textarea rows={1} value={q.notes || ''} onChange={e => setField('notes', e.target.value)} disabled={readonly} style={{ width: '100%', resize: 'vertical', maxHeight: 80 }} />
+              </div>
             </div>
           </div>
 
