@@ -46,8 +46,9 @@ export default async function QuoteViewPage({ params }) {
               <div className="grid grid-3">
                 <div><b>Term:</b> {q.term}</div><div><b>ETD:</b> {q.etd || '-'}</div><div><b>ETA:</b> {q.eta || '-'}</div>
                 <div><b>20&apos;:</b> {q.qty20}</div><div><b>40&apos;:</b> {q.qty40}</div><div><b>LCL/CBM:</b> {q.lcl}</div>
-                <div><b>Weight (kg):</b> {q.weight}</div><div><b>Agent:</b> {q.agent || '-'}</div><div><b>Line:</b> {q.lineCoLoader || '-'}</div>
-                <div><b>Hết hiệu lực:</b> {expiryDateLabel(q.createdAt, q.validDays)}</div>
+                <div><b>Weight (kg):</b> {q.weight}</div><div><b>Số kiện:</b> {q.pieces || 0} PCS</div><div><b>Agent:</b> {q.agent || '-'}</div>
+                <div><b>Line:</b> {q.lineCoLoader || '-'}</div><div><b>Hết hiệu lực:</b> {expiryDateLabel(q.createdAt, q.validDays)}</div>
+                {q.notes && <div style={{ gridColumn: '1 / -1' }}><b>Ghi chú:</b> {q.notes}</div>}
               </div>
             </div>
             <h3 style={{ margin: '18px 0 8px' }}>Chi tiết các hạng mục đã nhập</h3>
@@ -91,8 +92,10 @@ export default async function QuoteViewPage({ params }) {
           <a className="btn btn-primary" href={`/api/quotes/${q.id}/pdf`}>⬇ Xuất PDF Costing/Selling</a>
         </div>
         <div className="actions-row">
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf`}>🖨 In báo giá (PDF)</a>
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel`}>🖨 In báo giá (Excel)</a>
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf`}>🖨 In báo giá VI (PDF)</a>
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf?lang=en`}>🖨 In báo giá EN (PDF)</a>
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel`}>🖨 In báo giá VI (Excel)</a>
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel?lang=en`}>🖨 In báo giá EN (Excel)</a>
         </div>
       </div>
     </div>

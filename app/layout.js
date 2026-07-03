@@ -4,7 +4,7 @@ import { authOptions } from '../lib/auth';
 import Providers from '../components/Providers';
 
 export const metadata = {
-  title: 'ASW Sales Shipment Proposal',
+  title: 'Sales Shipment Proposal',
   description: 'Hệ thống báo giá lô hàng & duyệt nội bộ',
 };
 

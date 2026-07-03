@@ -42,7 +42,7 @@ export default function LoginPage() {
   return (
     <div className="login-wrap">
       <form className="login-box" onSubmit={doLogin}>
-        <h1>ASW Sales Shipment Proposal</h1>
+        <h1>Sales Shipment Proposal</h1>
         <p className="sub login-sub">Đăng nhập để tạo / duyệt báo giá lô hàng</p>
         <div className="field">
           <label>Tên đăng nhập</label>

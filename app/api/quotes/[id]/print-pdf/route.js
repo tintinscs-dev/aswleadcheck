@@ -13,8 +13,10 @@ export async function GET(req, { params }) {
   if (!quote) return new Response('not found', { status: 404 });
   if (user.role === 'sales' && quote.createdById !== user.id) return new Response('forbidden', { status: 403 });
 
+  const { searchParams } = new URL(req.url);
+  const lang = searchParams.get('lang') === 'en' ? 'en' : 'vi';
   const t = quoteToFormalTemplate(quote);
-  const buffer = await buildTemplatePdf(t, { formal: true, salesName: quote.sales || user.name });
+  const buffer = await buildTemplatePdf(t, { formal: true, salesName: quote.sales || user.name, lang });
 
   return new Response(buffer, {
     headers: {
