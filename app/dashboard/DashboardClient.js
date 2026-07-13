@@ -61,10 +61,11 @@ export default function DashboardClient({ quotes, user }) {
     return true;
   }), [localQuotes, filters]);
 
-  const totalKQKD = filtered.reduce((a, q) => a + calcQuote(q).KQKD, 0);
-  const pending = filtered.filter(q => q.status === 'pending').length;
-  const approved = filtered.filter(q => q.status === 'approved').length;
-  const draft = filtered.filter(q => q.status === 'draft').length;
+  const totalKQKD      = filtered.reduce((a, q) => a + calcQuote(q).KQKD, 0);
+  const pricingReview  = filtered.filter(q => q.status === 'pricing_review').length;
+  const pending        = filtered.filter(q => q.status === 'pending').length;
+  const approved       = filtered.filter(q => q.status === 'approved').length;
+  const draft          = filtered.filter(q => q.status === 'draft').length;
 
   useEffect(() => {
     if (!chartReady || typeof window === 'undefined' || !window.Chart) return;
@@ -83,12 +84,15 @@ export default function DashboardClient({ quotes, user }) {
       });
     }
 
-    const statusCounts = { draft: 0, pending: 0, approved: 0, rejected: 0 };
-    filtered.forEach(q => statusCounts[q.status] = (statusCounts[q.status] || 0) + 1);
+    const statusCounts = { draft: 0, pricing_review: 0, pending: 0, approved: 0, rejected: 0 };
+    filtered.forEach(q => { statusCounts[q.status] = (statusCounts[q.status] || 0) + 1; });
     if (statusChartRef.current) {
       chartInstances.current.status = new Chart(statusChartRef.current, {
         type: 'pie',
-        data: { labels: ['Nháp', 'Chờ duyệt', 'Đã duyệt', 'Từ chối'], datasets: [{ data: [statusCounts.draft, statusCounts.pending, statusCounts.approved, statusCounts.rejected], backgroundColor: ['#8a8f98', warn, ok, danger] }] },
+        data: {
+          labels: ['Nháp', 'Chờ Pricing', 'Chờ Manager', 'Đã duyệt', 'Từ chối'],
+          datasets: [{ data: [statusCounts.draft, statusCounts.pricing_review, statusCounts.pending, statusCounts.approved, statusCounts.rejected], backgroundColor: ['#8a8f98', '#c98a1f', '#1a73e8', ok, danger] }],
+        },
         options: { responsive: true, maintainAspectRatio: false },
       });
     }
@@ -115,7 +119,8 @@ export default function DashboardClient({ quotes, user }) {
 
       <div className="kpis">
         <div className="kpi"><div className="lbl">Tổng báo giá</div><div className="val">{filtered.length}</div></div>
-        <div className="kpi warn"><div className="lbl">Chờ duyệt</div><div className="val">{pending}</div></div>
+        <div className="kpi warn"><div className="lbl">Chờ Pricing</div><div className="val">{pricingReview}</div></div>
+        <div className="kpi warn"><div className="lbl">Chờ Manager duyệt</div><div className="val">{pending}</div></div>
         <div className="kpi ok"><div className="lbl">Đã duyệt</div><div className="val">{approved}</div></div>
         <div className="kpi"><div className="lbl">Bản nháp</div><div className="val">{draft}</div></div>
         <div className={`kpi ${totalKQKD >= 0 ? 'ok' : 'warn'}`}><div className="lbl">Tổng KQKD (USD)</div><div className="val">{fmt(totalKQKD)}</div></div>
@@ -138,7 +143,8 @@ export default function DashboardClient({ quotes, user }) {
           <select value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
             <option value="">Tất cả</option>
             <option value="draft">Nháp</option>
-            <option value="pending">Chờ duyệt</option>
+            <option value="pricing_review">Chờ Pricing</option>
+            <option value="pending">Chờ Manager duyệt</option>
             <option value="approved">Đã duyệt</option>
             <option value="rejected">Từ chối</option>
           </select>
@@ -168,7 +174,7 @@ export default function DashboardClient({ quotes, user }) {
             {rows.map(q => {
               const r = calcQuote(q);
               const canEdit = ((q.status === 'draft' || q.status === 'rejected') && (user.role === 'admin' || q.createdById === user.id))
-                || (q.status === 'approved' && (user.role === 'admin' || user.role === 'manager'));
+                || (q.status === 'approved' && ['admin', 'manager', 'operation'].includes(user.role));
               const canDelete = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
               return (
                 <tr key={q.id}>

@@ -3,6 +3,7 @@ import { prisma } from '../../../../lib/db';
 import { requireUser } from '../../../../lib/serverAuth';
 import { diffQuoteCosts } from '../../../../lib/diff';
 import { DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../../lib/calc';
+import { sendTelegram, quoteNotifyText } from '../../../../lib/telegram';
 
 // Snapshot the current shared FX rate table into the quote on every save — see
 // the matching helper/comment in app/api/quotes/route.js.
@@ -61,15 +62,19 @@ export async function PUT(req, { params }) {
       });
     }
   } else {
-    // Only 'draft' / 'pending' are legal self-service transitions here — a
-    // quote becomes 'approved'/'rejected' exclusively through the dedicated
-    // /approve route, which enforces the manager/admin role check. Without
-    // this whitelist a sales user could PUT { targetStatus: 'approved' }
-    // directly and self-approve their own quote.
+    // Allowed self-service transitions:
+    //   draft  → pricing_review  (Sales submits for cost check)
+    //   pricing_review → draft   (Sales recalls before Pricing acts)
+    // The quote moves to 'pending' only via the /pricing-review route,
+    // and to 'approved'/'rejected' only via the /approve route.
     const requested = _targetStatus;
-    targetStatus = ['draft', 'pending'].includes(requested) ? requested : existing.status;
-    if (targetStatus === 'pending' && existing.status !== 'pending') {
-      history.push({ by: user.name, role: user.role, action: 'submitted', comment: 'Gửi duyệt', date: new Date().toISOString() });
+    // Map legacy 'pending' submit calls → pricing_review so old clients still work
+    const mapped = requested === 'pending' ? 'pricing_review' : requested;
+    targetStatus = ['draft', 'pricing_review'].includes(mapped) ? mapped : existing.status;
+    if (targetStatus === 'pricing_review' && existing.status === 'draft') {
+      history.push({ by: user.name, role: user.role, action: 'submitted', comment: 'Gửi kiểm tra giá mua', date: new Date().toISOString() });
+      // Notify group — fire-and-forget
+      sendTelegram(quoteNotifyText({ ...existing, ...rest }, 'pricing_review', user.name, '')).catch(() => {});
     }
   }
 

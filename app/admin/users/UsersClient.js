@@ -2,10 +2,11 @@
 import { useState } from 'react';
 
 const ROLES = [
-  { value: 'sales', label: 'Sales' },
-  { value: 'operation', label: 'Operation' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'admin', label: 'Admin' },
+  { value: 'sales',    label: 'Sales' },
+  { value: 'pricing',  label: 'Pricing' },
+  { value: 'operation',label: 'Operation' },
+  { value: 'manager',  label: 'Manager' },
+  { value: 'admin',    label: 'Admin' },
 ];
 
 export default function UsersClient({ initialUsers, currentUserId }) {

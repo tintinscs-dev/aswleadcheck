@@ -21,7 +21,7 @@ export async function PUT(req, { params }) {
 
   const data = {};
   if (body.name) data.name = body.name;
-  if (body.role && ['sales', 'manager', 'admin', 'operation'].includes(body.role)) data.role = body.role;
+  if (body.role && ['sales', 'pricing', 'operation', 'manager', 'admin'].includes(body.role)) data.role = body.role;
   if (body.password) data.password = await bcrypt.hash(body.password, 10);
 
   try {

@@ -20,7 +20,7 @@ export async function POST(req) {
   if (!username || !password || !name || !role) {
     return NextResponse.json({ error: 'Thiếu thông tin.' }, { status: 400 });
   }
-  if (!['sales', 'manager', 'admin', 'operation'].includes(role)) {
+  if (!['sales', 'pricing', 'operation', 'manager', 'admin'].includes(role)) {
     return NextResponse.json({ error: 'Vai trò không hợp lệ.' }, { status: 400 });
   }
   const exists = await prisma.user.findUnique({ where: { username } });

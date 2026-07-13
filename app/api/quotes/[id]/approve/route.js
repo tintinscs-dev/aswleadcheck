@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
+import { sendTelegram, quoteNotifyText } from '../../../../../lib/telegram';
 
 export async function POST(req, { params }) {
   const user = await requireUser();
@@ -14,7 +15,7 @@ export async function POST(req, { params }) {
   const existing = await prisma.quote.findUnique({ where: { id: params.id } });
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
   if (existing.status !== 'pending') {
-    return NextResponse.json({ error: 'Báo giá không ở trạng thái chờ duyệt.' }, { status: 400 });
+    return NextResponse.json({ error: 'Báo giá không ở trạng thái chờ Manager duyệt.' }, { status: 400 });
   }
 
   const history = Array.isArray(existing.history) ? existing.history : [];
@@ -24,5 +25,9 @@ export async function POST(req, { params }) {
     where: { id: params.id },
     data: { status: action, history },
   });
+
+  // Telegram notification
+  sendTelegram(quoteNotifyText(existing, action, user.name, comment || '')).catch(() => {});
+
   return NextResponse.json(quote);
 }

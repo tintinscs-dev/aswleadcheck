@@ -10,6 +10,8 @@ export default async function DashboardPage() {
   if (!session?.user) redirect('/login');
   const user = session.user;
 
+  // Pricing sees all quotes (need to check costs across all sales)
+  // Sales only sees their own quotes
   const where = user.role === 'sales' ? { createdById: user.id } : {};
   const quotes = await prisma.quote.findMany({
     where,

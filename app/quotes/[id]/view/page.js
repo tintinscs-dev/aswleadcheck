@@ -7,8 +7,18 @@ import { calcQuote, statusLabel, expiryDateLabel, migrateQuote } from '../../../
 import { SummaryInner } from '../../QuoteForm';
 import ReadOnlyItems from './ReadOnlyItems';
 import ApproveBox from './ApproveBox';
+import PricingBox from './PricingBox';
 import CopyButton from './CopyButton';
 import DeleteButton from './DeleteButton';
+
+const ACTION_LABELS = {
+  submitted:        'GỬI KIỂM TRA GIÁ MUA',
+  pricing_approved: 'PRICING XÁC NHẬN GIÁ MUA',
+  pricing_rejected: 'PRICING YÊU CẦU CHỈNH SỬA',
+  approved:         'ĐÃ DUYỆT',
+  rejected:         'TỪ CHỐI',
+  adjusted:         'ĐIỀU CHỈNH PHÍ',
+};
 
 export default async function QuoteViewPage({ params }) {
   const session = await getServerSession(authOptions);
@@ -17,15 +27,18 @@ export default async function QuoteViewPage({ params }) {
 
   const quote = await prisma.quote.findUnique({ where: { id: params.id } });
   if (!quote) notFound();
+  // pricing role can view all quotes (they need to see them to check costs)
   if (user.role === 'sales' && quote.createdById !== user.id) redirect('/dashboard');
 
   const q = migrateQuote(JSON.parse(JSON.stringify(quote)));
   const r = calcQuote(q);
-  const canApprove = (user.role === 'manager' || user.role === 'admin') && q.status === 'pending';
-  const canAdjustFees = q.status === 'approved' && (user.role === 'admin' || user.role === 'manager');
-  const canDelete = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
+
+  const canPricingReview = ['pricing', 'admin'].includes(user.role) && q.status === 'pricing_review';
+  const canApprove       = ['manager', 'admin'].includes(user.role) && q.status === 'pending';
+  const canAdjustFees    = q.status === 'approved' && ['admin', 'manager', 'operation'].includes(user.role);
+  const canDelete        = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
+
   const history = Array.isArray(q.history) ? q.history.slice().reverse() : [];
-  const ACTION_LABELS = { submitted: 'GỬI DUYỆT', approved: 'ĐÃ DUYỆT', rejected: 'TỪ CHỐI', adjusted: 'ĐIỀU CHỈNH PHÍ' };
 
   return (
     <div>
@@ -54,14 +67,15 @@ export default async function QuoteViewPage({ params }) {
               </div>
             </div>
             <h3 style={{ margin: '18px 0 8px' }}>Chi tiết các hạng mục đã nhập</h3>
-            <div className="pagesub" style={{ marginTop: -4 }}>Hiển thị đầy đủ cho người xem / người duyệt và các bộ phận liên quan để tiếp tục xử lý.</div>
+            <div className="pagesub" style={{ marginTop: -4 }}>Hiển thị đầy đủ cho người xem / người duyệt và các bộ phận liên quan.</div>
             <ReadOnlyItems q={q} />
             <div className="card">
               <h3>Lịch sử / Duyệt</h3>
               {history.length === 0 && <div className="empty-state">Chưa có lịch sử.</div>}
               {history.map((h, i) => (
                 <div className="history-item" key={i}>
-                  <b>{ACTION_LABELS[h.action] || h.action.toUpperCase()}</b> — {h.comment || ''}
+                  <b>{ACTION_LABELS[h.action] || h.action.toUpperCase()}</b>
+                  {h.comment ? ` — ${h.comment}` : ''}
                   <div className="meta">{h.by} ({h.role}) · {new Date(h.date).toLocaleString('vi-VN')}</div>
                   {h.action === 'adjusted' && Array.isArray(h.changes) && h.changes.length > 0 && (
                     <ul className="diff-list">
@@ -70,10 +84,21 @@ export default async function QuoteViewPage({ params }) {
                   )}
                 </div>
               ))}
+
+              {canPricingReview && (
+                <>
+                  <div className="pagesub" style={{ marginTop: 12, marginBottom: 6 }}>
+                    Kiểm tra giá mua bên trên, sau đó xác nhận hoặc yêu cầu Sales chỉnh sửa.
+                  </div>
+                  <PricingBox quoteId={q.id} />
+                </>
+              )}
+
               {canApprove && <ApproveBox quoteId={q.id} />}
+
               {canAdjustFees && (
                 <div className="actions-row">
-                  <a className="btn btn-outline" href={`/quotes/${q.id}`}>💾 Điều chỉnh phí (giá mua / giá bán)</a>
+                  <a className="btn btn-outline" href={`/quotes/${q.id}`}>Điều chỉnh phí (giá mua / giá bán)</a>
                 </div>
               )}
             </div>
@@ -86,18 +111,18 @@ export default async function QuoteViewPage({ params }) {
           </div>
         </div>
         <div className="actions-row">
-          <a className="btn btn-outline" href="/dashboard">← Quay lại Dashboard</a>
+          <a className="btn btn-outline" href="/dashboard">Quay lại Dashboard</a>
           <CopyButton quoteId={q.id} />
           {canDelete && <DeleteButton quoteId={q.id} quoteNo={q.no} />}
         </div>
         <div className="actions-row">
-          <a className="btn btn-primary" href={`/api/quotes/${q.id}/pdf`}>⬇ Xuất PDF Costing/Selling</a>
+          <a className="btn btn-primary" href={`/api/quotes/${q.id}/pdf`}>Xuất PDF Costing/Selling</a>
         </div>
         <div className="actions-row">
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf`}>🖨 In báo giá VI (PDF)</a>
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf?lang=en`}>🖨 In báo giá EN (PDF)</a>
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel`}>🖨 In báo giá VI (Excel)</a>
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel?lang=en`}>🖨 In báo giá EN (Excel)</a>
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf`}>In báo giá VI (PDF)</a>
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf?lang=en`}>In báo giá EN (PDF)</a>
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel`}>In báo giá VI (Excel)</a>
+          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel?lang=en`}>In báo giá EN (Excel)</a>
         </div>
       </div>
     </div>

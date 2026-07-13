@@ -79,7 +79,8 @@ tbody td{padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowr
 tbody tr:hover{background:#f7faff;}
 .badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
 .badge-draft{background:#eceff3;color:#5a6573;}
-.badge-pending{background:#fff3d6;color:#8a5b00;}
+.badge-pricing_review{background:#fff0d0;color:#7a4200;border:1px solid #f5c87a;}
+.badge-pending{background:#ddeeff;color:#004080;}
 .badge-approved{background:#dff3e6;color:#1a7a44;}
 .badge-rejected{background:#fde2e0;color:#a8261b;}
 .mode-pill{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#e7eef8;color:var(--navy2);}
