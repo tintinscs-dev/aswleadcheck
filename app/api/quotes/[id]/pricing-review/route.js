@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
 import { sendTelegram, quoteNotifyText } from '../../../../../lib/telegram';
+import { sendEmailNotification } from '../../../../../lib/email';
 
 /**
  * POST /api/quotes/[id]/pricing-review
@@ -41,8 +42,9 @@ export async function POST(req, { params }) {
     data:  { status: newStatus, history },
   });
 
-  // Telegram notification
+  // Notify — fire-and-forget
   sendTelegram(quoteNotifyText(existing, action, user.name, comment || '')).catch(() => {});
+  sendEmailNotification(existing, action, user.name, comment || '').catch(() => {});
 
   return NextResponse.json(quote);
 }

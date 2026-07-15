@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
 import { sendTelegram, quoteNotifyText } from '../../../../../lib/telegram';
+import { sendEmailNotification } from '../../../../../lib/email';
 
 export async function POST(req, { params }) {
   const user = await requireUser();
@@ -26,8 +27,9 @@ export async function POST(req, { params }) {
     data: { status: action, history },
   });
 
-  // Telegram notification
+  // Notify — fire-and-forget
   sendTelegram(quoteNotifyText(existing, action, user.name, comment || '')).catch(() => {});
+  sendEmailNotification(existing, action, user.name, comment || '').catch(() => {});
 
   return NextResponse.json(quote);
 }

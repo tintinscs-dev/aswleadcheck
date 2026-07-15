@@ -23,10 +23,15 @@ export async function PUT(req, { params }) {
   if (body.name) data.name = body.name;
   if (body.role && ['sales', 'pricing', 'operation', 'manager', 'admin'].includes(body.role)) data.role = body.role;
   if (body.password) data.password = await bcrypt.hash(body.password, 10);
+  // notifyEmail: cho phép set rỗng ("") để xoá email
+  if ('notifyEmail' in body) data.notifyEmail = body.notifyEmail || null;
 
   try {
     const updated = await prisma.user.update({ where: { id: params.id }, data });
-    return NextResponse.json({ id: updated.id, username: updated.username, name: updated.name, role: updated.role });
+    return NextResponse.json({
+      id: updated.id, username: updated.username, name: updated.name,
+      role: updated.role, notifyEmail: updated.notifyEmail,
+    });
   } catch (e) {
     return NextResponse.json({ error: 'Không tìm thấy người dùng.' }, { status: 404 });
   }

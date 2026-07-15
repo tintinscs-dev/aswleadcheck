@@ -4,6 +4,7 @@ import { requireUser } from '../../../../lib/serverAuth';
 import { diffQuoteCosts } from '../../../../lib/diff';
 import { DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../../lib/calc';
 import { sendTelegram, quoteNotifyText } from '../../../../lib/telegram';
+import { sendEmailNotification } from '../../../../lib/email';
 
 // Snapshot the current shared FX rate table into the quote on every save — see
 // the matching helper/comment in app/api/quotes/route.js.
@@ -73,8 +74,10 @@ export async function PUT(req, { params }) {
     targetStatus = ['draft', 'pricing_review'].includes(mapped) ? mapped : existing.status;
     if (targetStatus === 'pricing_review' && existing.status === 'draft') {
       history.push({ by: user.name, role: user.role, action: 'submitted', comment: 'Gửi kiểm tra giá mua', date: new Date().toISOString() });
-      // Notify group — fire-and-forget
-      sendTelegram(quoteNotifyText({ ...existing, ...rest }, 'pricing_review', user.name, '')).catch(() => {});
+      // Notify — fire-and-forget
+      const notifyQuote = { ...existing, ...rest };
+      sendTelegram(quoteNotifyText(notifyQuote, 'pricing_review', user.name, '')).catch(() => {});
+      sendEmailNotification(notifyQuote, 'pricing_review', user.name, '').catch(() => {});
     }
   }
 

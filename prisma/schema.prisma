@@ -13,8 +13,9 @@ model User {
   username  String   @unique
   password  String
   name      String
-  role      String   // sales | operation | manager | admin
-  createdAt DateTime @default(now())
+  role        String   // sales | pricing | operation | manager | admin
+  notifyEmail String?  // email nhận thông báo workflow (do admin cài đặt)
+  createdAt   DateTime @default(now())
   quotes    Quote[]
 }
 
