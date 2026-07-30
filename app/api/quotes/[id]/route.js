@@ -37,7 +37,8 @@ export async function GET(req, { params }) {
 }
 
 // Roles allowed to touch fee tables on an already-approved quote at all.
-const FEE_EDITOR_ROLES = ['admin', 'operation', 'pricing'];
+// (Sales is further restricted to their own quotes by loadQuote() above.)
+const FEE_EDITOR_ROLES = ['admin', 'operation', 'pricing', 'sales'];
 // Of those, which ones apply their change immediately vs. only propose it.
 const IMMEDIATE_FEE_EDITOR_ROLES = ['admin'];
 
@@ -48,7 +49,7 @@ export async function PUT(req, { params }) {
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
   if (existing === 'forbidden') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (existing.status === 'approved' && !FEE_EDITOR_ROLES.includes(user.role)) {
-    return NextResponse.json({ error: 'Báo giá đã duyệt — chỉ Admin/Operation/Pricing được điều chỉnh phí.' }, { status: 403 });
+    return NextResponse.json({ error: 'Báo giá đã duyệt — chỉ Admin/Operation/Pricing/Sales (báo giá của mình) được điều chỉnh phí.' }, { status: 403 });
   }
 
   const body = await req.json();

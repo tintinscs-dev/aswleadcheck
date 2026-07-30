@@ -255,7 +255,7 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
   // While a proposal is already pending, only Admin can keep editing.
   const hasPendingAdjustment = isApproved && !!q.pendingAdjustment;
   const blockedByPendingAdjustment = hasPendingAdjustment && currentUser.role !== 'admin';
-  const feesReadonly = isApproved && (!['admin', 'operation', 'pricing'].includes(currentUser.role) || blockedByPendingAdjustment);
+  const feesReadonly = isApproved && (!['admin', 'operation', 'pricing', 'sales'].includes(currentUser.role) || blockedByPendingAdjustment);
   const canAdjustFees = isApproved && !feesReadonly;
   const r = useMemo(() => calcQuote(q), [q]);
 

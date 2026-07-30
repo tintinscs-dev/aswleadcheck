@@ -40,7 +40,7 @@ export default async function QuoteViewPage({ params }) {
   const canPricingReview = ['pricing', 'admin'].includes(user.role) && q.status === 'pricing_review';
   const canApprove       = ['manager', 'admin'].includes(user.role) && q.status === 'pending';
   const hasPendingAdjustment  = q.status === 'approved' && !!q.pendingAdjustment;
-  const canAdjustFees        = q.status === 'approved' && ['admin', 'operation', 'pricing'].includes(user.role) && (!hasPendingAdjustment || user.role === 'admin');
+  const canAdjustFees        = q.status === 'approved' && ['admin', 'operation', 'pricing', 'sales'].includes(user.role) && (!hasPendingAdjustment || user.role === 'admin');
   const canApproveAdjustment = hasPendingAdjustment && ['manager', 'admin'].includes(user.role);
   const canDelete        = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
 
