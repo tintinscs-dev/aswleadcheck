@@ -28,7 +28,7 @@ export async function POST(req, { params }) {
   }
 
   const {
-    id, createdAt, updatedAt, createdById, createdBy, status, history, no,
+    id, createdAt, updatedAt, createdById, createdBy, status, history, no, pendingAdjustment,
     fxRates: _oldFxRates, exchangeRate: _oldExchangeRate, ...rest
   } = existing;
 
@@ -44,7 +44,7 @@ export async function POST(req, { params }) {
     createdById: user.id,
     sales: existing.sales || user.name,
     history: [{
-      by: user.name, role: user.role, action: 'created_from_copy',
+      by: user.name, byId: user.id, role: user.role, action: 'created_from_copy',
       comment: `Sao chép từ báo giá ${no || existing.id}`, date: new Date().toISOString(),
     }],
   };

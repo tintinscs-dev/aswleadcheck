@@ -60,6 +60,7 @@ model Quote {
   fxRates             Json     @default("{}") // snapshot of system FX rates (non-USD -> USD) at last save
   status              String   @default("draft") // draft|pending|approved|rejected
   history             Json     @default("[]")
+  pendingAdjustment   Json?    // { proposedById, proposedBy, proposedByRole, comment, changes[], data, date } — fee-adjustment on an approved quote awaiting Manager/Admin approval
   createdById         String
   createdBy           User     @relation(fields: [createdById], references: [id])
   createdAt           DateTime @default(now())

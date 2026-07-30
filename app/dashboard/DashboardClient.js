@@ -42,7 +42,7 @@ export default function DashboardClient({ quotes, user }) {
     }
   }
   const [chartReady, setChartReady] = useState(false);
-  const modeChartRef = useRef(null), statusChartRef = useRef(null), salesChartRef = useRef(null), timeChartRef = useRef(null);
+  const modeChartRef = useRef(null), statusChartRef = useRef(null), salesChartRef = useRef(null), timeChartRef = useRef(null), routeChartRef = useRef(null);
   const chartInstances = useRef({});
 
   const salesNames = useMemo(() => [...new Set(localQuotes.map(q => q.sales).filter(Boolean))], [localQuotes]);
@@ -83,6 +83,25 @@ export default function DashboardClient({ quotes, user }) {
   const pending        = filtered.filter(q => q.status === 'pending').length;
   const approved       = filtered.filter(q => q.status === 'approved').length;
   const draft          = filtered.filter(q => q.status === 'draft').length;
+  const adjPending     = filtered.filter(q => q.pendingAdjustment).length;
+
+  // Average calendar days from creation to the Manager-approval history entry —
+  // a quick read on how fast quotes move through the pipeline for CEO/manager review.
+  const avgApprovalDays = useMemo(() => {
+    const durations = filtered
+      .filter(q => q.createdAt && Array.isArray(q.history))
+      .map(q => {
+        const approvedEntry = q.history.find(h => h.action === 'approved');
+        if (!approvedEntry) return null;
+        const start = new Date(q.createdAt).getTime();
+        const end = new Date(approvedEntry.date).getTime();
+        if (isNaN(start) || isNaN(end) || end < start) return null;
+        return (end - start) / 86400000;
+      })
+      .filter(v => v !== null);
+    if (!durations.length) return null;
+    return durations.reduce((a, b) => a + b, 0) / durations.length;
+  }, [filtered]);
 
   useEffect(() => {
     if (!chartReady || typeof window === 'undefined' || !window.Chart) return;
@@ -134,6 +153,25 @@ export default function DashboardClient({ quotes, user }) {
       byMonth[key].count++;
       byMonth[key].kqkd += calcQuote(q).KQKD;
     });
+    const byRoute = {};
+    filtered.forEach(q => {
+      const route = `${q.pol || '-'} → ${q.pod || '-'}`;
+      if (!byRoute[route]) byRoute[route] = { count: 0, kqkd: 0 };
+      byRoute[route].count++;
+      byRoute[route].kqkd += calcQuote(q).KQKD;
+    });
+    const topRoutes = Object.entries(byRoute).sort((a, b) => b[1].kqkd - a[1].kqkd).slice(0, 6);
+    if (routeChartRef.current) {
+      chartInstances.current.route = new Chart(routeChartRef.current, {
+        type: 'bar',
+        data: {
+          labels: topRoutes.length ? topRoutes.map(([r]) => r) : ['-'],
+          datasets: [{ label: 'KQKD (USD)', data: topRoutes.length ? topRoutes.map(([, v]) => v.kqkd) : [0], backgroundColor: navy }],
+        },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+      });
+    }
+
     const monthKeys = Object.keys(byMonth).sort();
     const monthLabels = monthKeys.map(k => { const [y, m] = k.split('-'); return `${m}/${y}`; });
     if (timeChartRef.current) {
@@ -170,14 +208,26 @@ export default function DashboardClient({ quotes, user }) {
         <div className="kpi warn"><div className="lbl">Chờ Manager duyệt</div><div className="val">{pending}</div></div>
         <div className="kpi ok"><div className="lbl">Đã duyệt</div><div className="val">{approved}</div></div>
         <div className="kpi"><div className="lbl">Bản nháp</div><div className="val">{draft}</div></div>
+        <div className={`kpi ${adjPending > 0 ? 'warn' : ''}`}><div className="lbl">Chờ duyệt điều chỉnh</div><div className="val">{adjPending}</div></div>
+        <div className="kpi"><div className="lbl">Thời gian duyệt TB (ngày)</div><div className="val">{avgApprovalDays === null ? '-' : avgApprovalDays.toFixed(1)}</div></div>
         <div className={`kpi ${totalKQKD >= 0 ? 'ok' : 'warn'}`}><div className="lbl">Tổng KQKD (USD)</div><div className="val">{fmt(totalKQKD)}</div></div>
       </div>
 
+      <h3 className="section-title">Cơ cấu chung</h3>
       <div className="charts-grid">
         <div className="card chart-card"><div className="chart-title">Cơ cấu loại hàng (FCL/LCL/Air)</div><div className="chart-wrap"><canvas ref={modeChartRef}></canvas></div></div>
         <div className="card chart-card"><div className="chart-title">Cơ cấu trạng thái duyệt</div><div className="chart-wrap"><canvas ref={statusChartRef}></canvas></div></div>
+      </div>
+
+      <h3 className="section-title">Hiệu suất Sales &amp; Tuyến</h3>
+      <div className="charts-grid">
         <div className="card chart-card"><div className="chart-title">KQKD theo Sales</div><div className="chart-wrap"><canvas ref={salesChartRef}></canvas></div></div>
-        <div className="card chart-card" style={{ gridColumn: '1 / -1' }}><div className="chart-title">Xu hướng theo thời gian (số báo giá &amp; KQKD)</div><div className="chart-wrap"><canvas ref={timeChartRef}></canvas></div></div>
+        <div className="card chart-card"><div className="chart-title">Top tuyến (POL → POD) theo KQKD</div><div className="chart-wrap"><canvas ref={routeChartRef}></canvas></div></div>
+      </div>
+
+      <h3 className="section-title">Xu hướng theo thời gian</h3>
+      <div className="charts-grid">
+        <div className="card chart-card" style={{ gridColumn: '1 / -1' }}><div className="chart-title">Số báo giá &amp; KQKD theo tháng</div><div className="chart-wrap"><canvas ref={timeChartRef}></canvas></div></div>
       </div>
 
       <div className="filterbar">
@@ -234,7 +284,7 @@ export default function DashboardClient({ quotes, user }) {
             {rows.map(q => {
               const r = calcQuote(q);
               const canEdit = ((q.status === 'draft' || q.status === 'rejected') && (user.role === 'admin' || q.createdById === user.id))
-                || (q.status === 'approved' && ['admin', 'manager', 'operation'].includes(user.role));
+                || (q.status === 'approved' && ['admin', 'operation', 'pricing'].includes(user.role) && (!q.pendingAdjustment || user.role === 'admin'));
               const canDelete = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
               return (
                 <tr key={q.id}>
@@ -244,7 +294,10 @@ export default function DashboardClient({ quotes, user }) {
                   <td>{q.cnee || '-'}</td>
                   <td>{q.pol || '-'} → {q.pod || '-'}</td>
                   <td>{q.sales || '-'}</td>
-                  <td><span className={`badge badge-${q.status}`}>{statusLabel(q.status)}</span></td>
+                  <td>
+                    <span className={`badge badge-${q.status}`}>{statusLabel(q.status)}</span>
+                    {q.pendingAdjustment && <span className="badge badge-pricing_review" style={{ marginLeft: 4 }}>⏳ Điều chỉnh</span>}
+                  </td>
                   <td style={{ textAlign: 'right', fontWeight: 700, color: r.KQKD >= 0 ? 'var(--ok)' : 'var(--danger)' }}>{fmt(r.KQKD)}</td>
                   <td>
                     <Link href={`/quotes/${q.id}/view`}><button className="btn btn-outline btn-sm">Xem</button></Link>

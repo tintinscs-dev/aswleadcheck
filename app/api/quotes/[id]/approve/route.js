@@ -20,7 +20,7 @@ export async function POST(req, { params }) {
   }
 
   const history = Array.isArray(existing.history) ? existing.history : [];
-  history.push({ by: user.name, role: user.role, action, comment: comment || '', date: new Date().toISOString() });
+  history.push({ by: user.name, byId: user.id, role: user.role, action, comment: comment || '', date: new Date().toISOString() });
 
   const quote = await prisma.quote.update({
     where: { id: params.id },

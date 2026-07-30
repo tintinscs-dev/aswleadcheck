@@ -36,14 +36,19 @@ export async function GET(req, { params }) {
   return NextResponse.json(quote);
 }
 
+// Roles allowed to touch fee tables on an already-approved quote at all.
+const FEE_EDITOR_ROLES = ['admin', 'operation', 'pricing'];
+// Of those, which ones apply their change immediately vs. only propose it.
+const IMMEDIATE_FEE_EDITOR_ROLES = ['admin'];
+
 export async function PUT(req, { params }) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const existing = await loadQuote(params.id, user);
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
   if (existing === 'forbidden') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  if (existing.status === 'approved' && !['admin', 'manager', 'operation'].includes(user.role)) {
-    return NextResponse.json({ error: 'Báo giá đã duyệt — chỉ Admin/Manager/Operation được điều chỉnh phí.' }, { status: 403 });
+  if (existing.status === 'approved' && !FEE_EDITOR_ROLES.includes(user.role)) {
+    return NextResponse.json({ error: 'Báo giá đã duyệt — chỉ Admin/Operation/Pricing được điều chỉnh phí.' }, { status: 403 });
   }
 
   const body = await req.json();
@@ -51,16 +56,54 @@ export async function PUT(req, { params }) {
   const { id, createdAt, updatedAt, createdBy, createdById, adjustmentComment, targetStatus: _targetStatus, ...rest } = body;
 
   let targetStatus;
+  let pendingAdjustment = existing.pendingAdjustment || null;
   if (existing.status === 'approved') {
-    // Adjusting fees on an already-approved quote: status stays "approved",
-    // changes are diffed and logged instead of going through re-approval.
     targetStatus = 'approved';
     const changes = diffQuoteCosts(existing, rest);
-    if (changes.length > 0) {
+
+    if (IMMEDIATE_FEE_EDITOR_ROLES.includes(user.role)) {
+      // Admin: applies immediately, and supersedes/clears any proposal still
+      // awaiting Manager approval (admin's direct edit is authoritative).
+      if (changes.length > 0) {
+        history.push({
+          by: user.name, byId: user.id, role: user.role, action: 'adjusted',
+          comment: adjustmentComment || '', changes, date: new Date().toISOString(),
+        });
+      }
+      pendingAdjustment = null;
+    } else {
+      // Operation / Pricing: cannot edit approved fees directly anymore —
+      // their change is saved as a proposal that Manager/Admin must approve
+      // before it takes effect. The quote's live data is left untouched.
+      if (existing.pendingAdjustment) {
+        return NextResponse.json({ error: 'Đã có một đề xuất điều chỉnh khác đang chờ Manager duyệt cho báo giá này.' }, { status: 409 });
+      }
+      if (changes.length === 0) {
+        return NextResponse.json(existing);
+      }
+      pendingAdjustment = {
+        proposedById: user.id, proposedBy: user.name, proposedByRole: user.role,
+        comment: adjustmentComment || '', changes, data: rest, date: new Date().toISOString(),
+      };
       history.push({
-        by: user.name, role: user.role, action: 'adjusted',
+        by: user.name, byId: user.id, role: user.role, action: 'adjustment_proposed',
         comment: adjustmentComment || '', changes, date: new Date().toISOString(),
       });
+
+      const fxRates = await currentFxRates();
+      const exchangeRate = usdVndRateFromFx(fxRates);
+      try {
+        const quote = await prisma.quote.update({
+          where: { id: params.id },
+          data: { fxRates, exchangeRate, history, pendingAdjustment },
+        });
+        sendTelegram(quoteNotifyText(existing, 'adjustment_proposed', user.name, adjustmentComment || '')).catch(() => {});
+        sendEmailNotification(existing, 'adjustment_proposed', user.name, adjustmentComment || '').catch(() => {});
+        return NextResponse.json(quote);
+      } catch (e) {
+        console.error('PUT /api/quotes/[id] (propose adjustment) failed:', e);
+        return NextResponse.json({ error: 'Gửi đề xuất thất bại — lỗi hệ thống khi cập nhật dữ liệu.' }, { status: 500 });
+      }
     }
   } else {
     // Allowed self-service transitions:
@@ -73,7 +116,7 @@ export async function PUT(req, { params }) {
     const mapped = requested === 'pending' ? 'pricing_review' : requested;
     targetStatus = ['draft', 'pricing_review'].includes(mapped) ? mapped : existing.status;
     if (targetStatus === 'pricing_review' && existing.status === 'draft') {
-      history.push({ by: user.name, role: user.role, action: 'submitted', comment: 'Gửi kiểm tra giá mua', date: new Date().toISOString() });
+      history.push({ by: user.name, byId: user.id, role: user.role, action: 'submitted', comment: 'Gửi kiểm tra giá mua', date: new Date().toISOString() });
       // Notify — fire-and-forget
       const notifyQuote = { ...existing, ...rest };
       sendTelegram(quoteNotifyText(notifyQuote, 'pricing_review', user.name, '')).catch(() => {});
@@ -83,7 +126,7 @@ export async function PUT(req, { params }) {
 
   const fxRates = await currentFxRates();
   const exchangeRate = usdVndRateFromFx(fxRates);
-  const data = { ...rest, fxRates, exchangeRate, status: targetStatus, history };
+  const data = { ...rest, fxRates, exchangeRate, status: targetStatus, history, pendingAdjustment };
 
   try {
     const quote = await prisma.quote.update({ where: { id: params.id }, data });

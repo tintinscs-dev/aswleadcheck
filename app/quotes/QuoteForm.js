@@ -250,8 +250,12 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
   const isApproved = q.status === 'approved';
   // General booking info stays locked after approval unless you're Admin.
   const readonly = isApproved && currentUser.role !== 'admin';
-  // Fee tables (buying/selling/other costs) can still be adjusted by Admin, Manager, or Operation after approval.
-  const feesReadonly = isApproved && !['admin', 'manager', 'operation'].includes(currentUser.role);
+  // Fee tables (buying/selling/other costs) can be touched by Admin (applies
+  // immediately), or Operation/Pricing (submits a proposal Manager must approve).
+  // While a proposal is already pending, only Admin can keep editing.
+  const hasPendingAdjustment = isApproved && !!q.pendingAdjustment;
+  const blockedByPendingAdjustment = hasPendingAdjustment && currentUser.role !== 'admin';
+  const feesReadonly = isApproved && (!['admin', 'operation', 'pricing'].includes(currentUser.role) || blockedByPendingAdjustment);
   const canAdjustFees = isApproved && !feesReadonly;
   const r = useMemo(() => calcQuote(q), [q]);
 
@@ -288,6 +292,10 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Lưu thất bại.');
       }
+      const saved = await res.json().catch(() => null);
+      if (!isNew && isApproved && currentUser.role !== 'admin' && saved?.pendingAdjustment) {
+        alert(t('adjust.proposedAlert'));
+      }
       router.push('/dashboard');
       router.refresh();
     } catch (e) {
@@ -301,8 +309,9 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
     <div>
       <h2>{isNew ? t('form.title.new') : `${t('form.title.edit')} ${q.no || ''}`}</h2>
       <div className="pagesub">{t('form.subtitle')}</div>
-      {isApproved && feesReadonly && <div className="lock-note">{t('form.locked')}</div>}
-      {isApproved && !feesReadonly && <div className="lock-note">{t('form.adjusting')}</div>}
+      {isApproved && blockedByPendingAdjustment && <div className="lock-note">{t('form.pendingAdjustment')}</div>}
+      {isApproved && !blockedByPendingAdjustment && feesReadonly && <div className="lock-note">{t('form.locked')}</div>}
+      {isApproved && !feesReadonly && <div className="lock-note">{currentUser.role === 'admin' ? t('form.adjusting') : t('form.adjustingProposal')}</div>}
       {err && <div className="login-err">{err}</div>}
       <div className="layout-form">
         <div>
@@ -459,7 +468,9 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
           {canAdjustFees && (
             <div className="actions-row">
               <button className="btn btn-outline" onClick={() => router.push('/dashboard')}>{t('btn.cancel')}</button>
-              <button className="btn btn-primary" disabled={saving} onClick={() => save('approved')}>{t('btn.saveAdjust')}</button>
+              <button className="btn btn-primary" disabled={saving} onClick={() => save('approved')}>
+                {currentUser.role === 'admin' ? t('btn.saveAdjust') : t('btn.proposeAdjust')}
+              </button>
             </div>
           )}
         </div>

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useLang } from './LangContext';
 
-const ROLE_LABEL = { sales: 'Sales', operation: 'Operation', manager: 'Manager', admin: 'Admin' };
+const ROLE_LABEL = { sales: 'Sales', pricing: 'Pricing', operation: 'Operation', manager: 'Manager', admin: 'Admin' };
 
 export default function Topbar({ user }) {
   const pathname = usePathname();
@@ -20,6 +20,9 @@ export default function Topbar({ user }) {
         <Link href="/fx-rates"><button className={isActive('/fx-rates')}>{t('nav.fxRates')}</button></Link>
         {(user.role === 'manager' || user.role === 'admin') && (
           <Link href="/approvals"><button className={isActive('/approvals')}>{t('nav.approvals')}</button></Link>
+        )}
+        {(user.role === 'manager' || user.role === 'admin') && (
+          <Link href="/admin/activity"><button className={isActive('/admin/activity')}>{t('nav.activity')}</button></Link>
         )}
         {user.role === 'admin' && (
           <Link href="/admin/users"><button className={isActive('/admin/users')}>{t('nav.users')}</button></Link>

@@ -8,16 +8,20 @@ import { SummaryInner } from '../../QuoteForm';
 import ReadOnlyItems from './ReadOnlyItems';
 import ApproveBox from './ApproveBox';
 import PricingBox from './PricingBox';
+import AdjustmentApproveBox from './AdjustmentApproveBox';
 import CopyButton from './CopyButton';
 import DeleteButton from './DeleteButton';
 
 const ACTION_LABELS = {
-  submitted:        'GỬI KIỂM TRA GIÁ MUA',
-  pricing_approved: 'PRICING XÁC NHẬN GIÁ MUA',
-  pricing_rejected: 'PRICING YÊU CẦU CHỈNH SỬA',
-  approved:         'ĐÃ DUYỆT',
-  rejected:         'TỪ CHỐI',
-  adjusted:         'ĐIỀU CHỈNH PHÍ',
+  submitted:            'GỬI KIỂM TRA GIÁ MUA',
+  pricing_approved:     'PRICING XÁC NHẬN GIÁ MUA',
+  pricing_rejected:     'PRICING YÊU CẦU CHỈNH SỬA',
+  approved:             'ĐÃ DUYỆT',
+  rejected:             'TỪ CHỐI',
+  adjusted:             'ĐIỀU CHỈNH PHÍ (ADMIN)',
+  adjustment_proposed:  'ĐỀ XUẤT ĐIỀU CHỈNH PHÍ (CHỜ DUYỆT)',
+  adjustment_approved:  'DUYỆT ĐIỀU CHỈNH PHÍ',
+  adjustment_rejected:  'TỪ CHỐI ĐIỀU CHỈNH PHÍ',
 };
 
 export default async function QuoteViewPage({ params }) {
@@ -35,7 +39,9 @@ export default async function QuoteViewPage({ params }) {
 
   const canPricingReview = ['pricing', 'admin'].includes(user.role) && q.status === 'pricing_review';
   const canApprove       = ['manager', 'admin'].includes(user.role) && q.status === 'pending';
-  const canAdjustFees    = q.status === 'approved' && ['admin', 'manager', 'operation'].includes(user.role);
+  const hasPendingAdjustment  = q.status === 'approved' && !!q.pendingAdjustment;
+  const canAdjustFees        = q.status === 'approved' && ['admin', 'operation', 'pricing'].includes(user.role) && (!hasPendingAdjustment || user.role === 'admin');
+  const canApproveAdjustment = hasPendingAdjustment && ['manager', 'admin'].includes(user.role);
   const canDelete        = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
 
   const history = Array.isArray(q.history) ? q.history.slice().reverse() : [];
@@ -44,7 +50,10 @@ export default async function QuoteViewPage({ params }) {
     <div>
       <Topbar user={user} />
       <div className="page">
-        <h2>Báo giá {q.no || q.id} <span className={`badge badge-${q.status}`}>{statusLabel(q.status)}</span></h2>
+        <h2>
+          Báo giá {q.no || q.id} <span className={`badge badge-${q.status}`}>{statusLabel(q.status)}</span>
+          {hasPendingAdjustment && <span className="badge badge-pricing_review" style={{ marginLeft: 6 }}>⏳ Chờ duyệt điều chỉnh</span>}
+        </h2>
         <div className="pagesub">
           {[
             (q.shpr || q.cnee) && [q.shpr, q.cnee].filter(Boolean).join(' → '),
@@ -77,7 +86,7 @@ export default async function QuoteViewPage({ params }) {
                   <b>{ACTION_LABELS[h.action] || h.action.toUpperCase()}</b>
                   {h.comment ? ` — ${h.comment}` : ''}
                   <div className="meta">{h.by} ({h.role}) · {new Date(h.date).toLocaleString('vi-VN')}</div>
-                  {h.action === 'adjusted' && Array.isArray(h.changes) && h.changes.length > 0 && (
+                  {['adjusted', 'adjustment_proposed', 'adjustment_approved'].includes(h.action) && Array.isArray(h.changes) && h.changes.length > 0 && (
                     <ul className="diff-list">
                       {h.changes.map((c, ci) => <li key={ci}>{c}</li>)}
                     </ul>
@@ -95,6 +104,29 @@ export default async function QuoteViewPage({ params }) {
               )}
 
               {canApprove && <ApproveBox quoteId={q.id} />}
+
+              {hasPendingAdjustment && (
+                <div className="history-item" style={{ borderLeftColor: 'var(--warn, #c98a1f)' }}>
+                  <b>ĐỀ XUẤT ĐIỀU CHỈNH ĐANG CHỜ DUYỆT</b>
+                  {q.pendingAdjustment.comment ? ` — ${q.pendingAdjustment.comment}` : ''}
+                  <div className="meta">
+                    {q.pendingAdjustment.proposedBy} ({q.pendingAdjustment.proposedByRole}) · {new Date(q.pendingAdjustment.date).toLocaleString('vi-VN')}
+                  </div>
+                  {Array.isArray(q.pendingAdjustment.changes) && q.pendingAdjustment.changes.length > 0 && (
+                    <ul className="diff-list">
+                      {q.pendingAdjustment.changes.map((c, ci) => <li key={ci}>{c}</li>)}
+                    </ul>
+                  )}
+                  {canApproveAdjustment && (
+                    <>
+                      <div className="pagesub" style={{ marginTop: 12, marginBottom: 6 }}>
+                        Xem lại các thay đổi bên trên, sau đó duyệt hoặc từ chối đề xuất điều chỉnh.
+                      </div>
+                      <AdjustmentApproveBox quoteId={q.id} />
+                    </>
+                  )}
+                </div>
+              )}
 
               {canAdjustFees && (
                 <div className="actions-row">

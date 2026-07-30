@@ -21,7 +21,7 @@ export async function POST(req) {
   data.sales = data.sales || user.name;
   data.createdById = user.id;
   data.status = 'draft';
-  data.history = [{ by: user.name, role: user.role, action: 'created_from_template', comment: 'Tạo từ Quote theo mẫu', date: new Date().toISOString() }];
+  data.history = [{ by: user.name, byId: user.id, role: user.role, action: 'created_from_template', comment: 'Tạo từ Quote theo mẫu', date: new Date().toISOString() }];
 
   const quote = await prisma.quote.create({ data });
   return NextResponse.json({ id: quote.id });
