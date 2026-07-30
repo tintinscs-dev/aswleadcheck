@@ -12,7 +12,7 @@ export default function DashboardClient({ quotes, user }) {
   const [copyingId, setCopyingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [localQuotes, setLocalQuotes] = useState(quotes);
-  const [filters, setFilters] = useState({ mode: '', status: '', sales: '', pol: '', pod: '', search: '' });
+  const [filters, setFilters] = useState({ mode: '', status: '', sales: '', pol: '', pod: '', search: '', year: '', month: '' });
 
   async function copyQuote(id) {
     setCopyingId(id);
@@ -42,10 +42,21 @@ export default function DashboardClient({ quotes, user }) {
     }
   }
   const [chartReady, setChartReady] = useState(false);
-  const modeChartRef = useRef(null), statusChartRef = useRef(null), salesChartRef = useRef(null);
+  const modeChartRef = useRef(null), statusChartRef = useRef(null), salesChartRef = useRef(null), timeChartRef = useRef(null);
   const chartInstances = useRef({});
 
   const salesNames = useMemo(() => [...new Set(localQuotes.map(q => q.sales).filter(Boolean))], [localQuotes]);
+
+  const polOptions = useMemo(() => [...new Set([...PORTS, ...localQuotes.map(q => q.pol).filter(Boolean)])], [localQuotes]);
+
+  const yearsAvailable = useMemo(() => {
+    const ys = new Set();
+    localQuotes.forEach(q => {
+      const d = q.createdAt ? new Date(q.createdAt) : null;
+      if (d && !isNaN(d)) ys.add(d.getFullYear());
+    });
+    return [...ys].sort((a, b) => b - a);
+  }, [localQuotes]);
 
   const filtered = useMemo(() => localQuotes.filter(q => {
     if (filters.mode && !quoteModes(q).includes(filters.mode)) return false;
@@ -53,6 +64,12 @@ export default function DashboardClient({ quotes, user }) {
     if (filters.sales && q.sales !== filters.sales) return false;
     if (filters.pol && q.pol !== filters.pol) return false;
     if (filters.pod && !(q.pod || '').toLowerCase().includes(filters.pod.toLowerCase())) return false;
+    if (filters.year || filters.month) {
+      const d = q.createdAt ? new Date(q.createdAt) : null;
+      if (!d || isNaN(d)) return false;
+      if (filters.year && d.getFullYear() !== Number(filters.year)) return false;
+      if (filters.month && (d.getMonth() + 1) !== Number(filters.month)) return false;
+    }
     if (filters.search) {
       const s = filters.search.toLowerCase();
       const hay = `${q.no || ''} ${q.shpr || ''} ${q.cnee || ''}`.toLowerCase();
@@ -107,6 +124,36 @@ export default function DashboardClient({ quotes, user }) {
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
       });
     }
+
+    const byMonth = {};
+    filtered.forEach(q => {
+      const d = q.createdAt ? new Date(q.createdAt) : null;
+      if (!d || isNaN(d)) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (!byMonth[key]) byMonth[key] = { count: 0, kqkd: 0 };
+      byMonth[key].count++;
+      byMonth[key].kqkd += calcQuote(q).KQKD;
+    });
+    const monthKeys = Object.keys(byMonth).sort();
+    const monthLabels = monthKeys.map(k => { const [y, m] = k.split('-'); return `${m}/${y}`; });
+    if (timeChartRef.current) {
+      chartInstances.current.time = new Chart(timeChartRef.current, {
+        data: {
+          labels: monthKeys.length ? monthLabels : ['-'],
+          datasets: [
+            { type: 'bar', label: 'Số báo giá', data: monthKeys.length ? monthKeys.map(k => byMonth[k].count) : [0], backgroundColor: navy2, yAxisID: 'y' },
+            { type: 'line', label: 'KQKD (USD)', data: monthKeys.length ? monthKeys.map(k => byMonth[k].kqkd) : [0], borderColor: ok, backgroundColor: ok, yAxisID: 'y1', tension: 0.3 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Số báo giá' } },
+            y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'KQKD (USD)' } },
+          },
+        },
+      });
+    }
   }, [chartReady, filtered]);
 
   const rows = filtered.slice().sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
@@ -130,9 +177,22 @@ export default function DashboardClient({ quotes, user }) {
         <div className="card chart-card"><div className="chart-title">Cơ cấu loại hàng (FCL/LCL/Air)</div><div className="chart-wrap"><canvas ref={modeChartRef}></canvas></div></div>
         <div className="card chart-card"><div className="chart-title">Cơ cấu trạng thái duyệt</div><div className="chart-wrap"><canvas ref={statusChartRef}></canvas></div></div>
         <div className="card chart-card"><div className="chart-title">KQKD theo Sales</div><div className="chart-wrap"><canvas ref={salesChartRef}></canvas></div></div>
+        <div className="card chart-card" style={{ gridColumn: '1 / -1' }}><div className="chart-title">Xu hướng theo thời gian (số báo giá &amp; KQKD)</div><div className="chart-wrap"><canvas ref={timeChartRef}></canvas></div></div>
       </div>
 
       <div className="filterbar">
+        <div className="field"><label>Năm</label>
+          <select value={filters.year} onChange={e => setFilters(f => ({ ...f, year: e.target.value }))}>
+            <option value="">Tất cả</option>
+            {yearsAvailable.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div className="field"><label>Tháng</label>
+          <select value={filters.month} onChange={e => setFilters(f => ({ ...f, month: e.target.value }))}>
+            <option value="">Tất cả</option>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{`Tháng ${m}`}</option>)}
+          </select>
+        </div>
         <div className="field"><label>Loại hàng</label>
           <select value={filters.mode} onChange={e => setFilters(f => ({ ...f, mode: e.target.value }))}>
             <option value="">Tất cả</option>
@@ -158,7 +218,7 @@ export default function DashboardClient({ quotes, user }) {
         <div className="field"><label>POL</label>
           <select value={filters.pol} onChange={e => setFilters(f => ({ ...f, pol: e.target.value }))}>
             <option value="">Tất cả</option>
-            {PORTS.map(p => <option key={p} value={p}>{p}</option>)}
+            {polOptions.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div className="field"><label>POD chứa</label><input value={filters.pod} onChange={e => setFilters(f => ({ ...f, pod: e.target.value }))} placeholder="vd: Busan" /></div>

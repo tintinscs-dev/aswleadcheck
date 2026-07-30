@@ -345,10 +345,16 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
             </div>
             <div className="grid grid-4">
               <div className="field"><label>{t('field.pol')}</label>
-                <select value={q.pol || ''} onChange={e => setField('pol', e.target.value)} disabled={readonly}>
-                  <option value="">--</option>
-                  {PORTS.map(p => <option key={p}>{p}</option>)}
-                </select>
+                <input
+                  list="pol-suggestions"
+                  value={q.pol || ''}
+                  onChange={e => setField('pol', e.target.value)}
+                  disabled={readonly}
+                  placeholder="VN hoặc cảng nước ngoài"
+                />
+                <datalist id="pol-suggestions">
+                  {PORTS.map(p => <option key={p} value={p} />)}
+                </datalist>
               </div>
               <div className="field"><label>{t('field.pod')}</label><input value={q.pod || ''} onChange={e => setField('pod', e.target.value)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.pickup')}</label><input value={q.pickup || ''} onChange={e => setField('pickup', e.target.value)} disabled={readonly} /></div>
