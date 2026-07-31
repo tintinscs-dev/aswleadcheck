@@ -14,6 +14,10 @@ export async function PUT(req, { params }) {
   if (params.id === user.id && body.role && body.role !== user.role) {
     return NextResponse.json({ error: 'Không thể tự đổi quyền của chính mình.' }, { status: 400 });
   }
+  // Same reasoning for locking your own account — you'd have no admin left to unlock it.
+  if (params.id === user.id && body.active === false) {
+    return NextResponse.json({ error: 'Không thể tự khoá chính mình.' }, { status: 400 });
+  }
 
   if (body.password && body.password.length < 6) {
     return NextResponse.json({ error: 'Mật khẩu phải có ít nhất 6 ký tự.' }, { status: 400 });
@@ -25,12 +29,13 @@ export async function PUT(req, { params }) {
   if (body.password) data.password = await bcrypt.hash(body.password, 10);
   // notifyEmail: cho phép set rỗng ("") để xoá email
   if ('notifyEmail' in body) data.notifyEmail = body.notifyEmail || null;
+  if (typeof body.active === 'boolean') data.active = body.active;
 
   try {
     const updated = await prisma.user.update({ where: { id: params.id }, data });
     return NextResponse.json({
       id: updated.id, username: updated.username, name: updated.name,
-      role: updated.role, notifyEmail: updated.notifyEmail,
+      role: updated.role, notifyEmail: updated.notifyEmail, active: updated.active,
     });
   } catch (e) {
     return NextResponse.json({ error: 'Không tìm thấy người dùng.' }, { status: 404 });

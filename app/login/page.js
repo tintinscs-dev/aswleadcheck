@@ -23,7 +23,7 @@ export default function LoginPage() {
     try {
       const res = await signIn('credentials', { username, password, redirect: false });
       if (res?.error) {
-        setError('Sai tên đăng nhập hoặc mật khẩu.');
+        setError('Sai tên đăng nhập hoặc mật khẩu, hoặc tài khoản đã bị khoá.');
         return;
       }
       if (!res?.ok) {

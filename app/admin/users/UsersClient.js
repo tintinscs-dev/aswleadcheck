@@ -64,11 +64,19 @@ export default function UsersClient({ initialUsers, currentUserId }) {
     if (res.ok) alert('Đã đặt lại mật khẩu.'); else alert('Thất bại.');
   }
 
-  async function removeUser(id) {
-    if (!window.confirm('Xoá người dùng này?')) return;
-    const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
-    if (res.ok) setUsers(u => u.filter(x => x.id !== id));
-    else { const b = await res.json().catch(() => ({})); alert(b.error || 'Thất bại.'); }
+  async function toggleActive(id, active) {
+    const verb = active ? 'khoá' : 'mở khoá';
+    if (!window.confirm(`Xác nhận ${verb} tài khoản này?${active ? ' Người dùng sẽ không đăng nhập được cho đến khi được mở khoá lại.' : ''}`)) return;
+    const res = await fetch(`/api/users/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !active }),
+    });
+    if (res.ok) {
+      const body = await res.json();
+      setUsers(u => u.map(x => x.id === id ? { ...x, ...body } : x));
+    } else {
+      const b = await res.json().catch(() => ({}));
+      alert(b.error || 'Thất bại.');
+    }
   }
 
   return (
@@ -130,8 +138,9 @@ export default function UsersClient({ initialUsers, currentUserId }) {
             <tr style={{ background: '#eef2f8' }}>
               <th style={thStyle}>Nhân viên</th>
               <th style={{ ...thStyle, width: 130 }}>Vai trò</th>
+              <th style={{ ...thStyle, width: 110 }}>Trạng thái</th>
               <th style={thStyle}>Email thông báo</th>
-              <th style={{ ...thStyle, width: 180 }}>Thao tác</th>
+              <th style={{ ...thStyle, width: 200 }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -140,8 +149,9 @@ export default function UsersClient({ initialUsers, currentUserId }) {
               const editVal = editingEmail[u.id] !== undefined ? editingEmail[u.id] : currentEmail;
               const isDirty = editingEmail[u.id] !== undefined && editingEmail[u.id] !== currentEmail;
 
+              const isActive = u.active !== false;
               return (
-                <tr key={u.id} style={{ borderBottom: '1px solid #e1e6ee' }}>
+                <tr key={u.id} style={{ borderBottom: '1px solid #e1e6ee', opacity: isActive ? 1 : 0.55 }}>
                   <td style={tdStyle}>
                     <b>{u.name}</b>
                     <div style={{ fontSize: 11, color: '#6B7787' }}>@{u.username}</div>
@@ -155,6 +165,11 @@ export default function UsersClient({ initialUsers, currentUserId }) {
                     >
                       {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                     </select>
+                  </td>
+                  <td style={tdStyle}>
+                    <span className={`badge ${isActive ? 'badge-approved' : 'badge-rejected'}`}>
+                      {isActive ? 'Hoạt động' : 'Đã khoá'}
+                    </span>
                   </td>
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -180,7 +195,14 @@ export default function UsersClient({ initialUsers, currentUserId }) {
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button className="btn btn-outline btn-sm" onClick={() => resetPassword(u.id)}>Đặt lại MK</button>
-                      <button className="btn btn-danger btn-sm" disabled={u.id === currentUserId} onClick={() => removeUser(u.id)}>Xoá</button>
+                      <button
+                        className={`btn btn-sm ${isActive ? 'btn-danger' : 'btn-ok'}`}
+                        disabled={u.id === currentUserId}
+                        title={u.id === currentUserId ? 'Không thể tự khoá chính mình' : (isActive ? 'Khoá tạm thời — có thể mở lại bất cứ lúc nào' : 'Mở khoá tài khoản')}
+                        onClick={() => toggleActive(u.id, isActive)}
+                      >
+                        {isActive ? '🔒 Khoá' : '🔓 Mở khoá'}
+                      </button>
                     </div>
                   </td>
                 </tr>

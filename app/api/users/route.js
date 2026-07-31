@@ -7,7 +7,7 @@ export async function GET() {
   const user = await requireUser();
   if (!user || user.role !== 'admin') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   const users = await prisma.user.findMany({
-    select: { id: true, username: true, name: true, role: true, notifyEmail: true, createdAt: true },
+    select: { id: true, username: true, name: true, role: true, notifyEmail: true, active: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
   return NextResponse.json(users);
@@ -32,6 +32,6 @@ export async function POST(req) {
   });
   return NextResponse.json({
     id: created.id, username: created.username, name: created.name,
-    role: created.role, notifyEmail: created.notifyEmail,
+    role: created.role, notifyEmail: created.notifyEmail, active: created.active,
   });
 }
