@@ -488,7 +488,7 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
 
 export function SummaryInner({ r }) {
   const { t } = useLang();
-  function row(label, val) { return <div className="sum-row"><span>{label}</span><span className="v">{fmt(val)}</span></div>; }
+  function row(label, val, unit = 'USD') { return <div className="sum-row"><span>{label}</span><span className="v">{fmt(val)} <span className="unit">{unit}</span></span></div>; }
   return (
     <>
       <div className="sum-section-title">{t('sum.cost')}</div>
@@ -507,9 +507,9 @@ export function SummaryInner({ r }) {
       {row(t('sum.cuocCont'), r.interestCuocCont)}
       {row(t('sum.chiHo'), r.interestChiHoKhac)}
       {row(t('sum.cpKhac'), r.CPKhac)}
-      <div className="sum-row total"><span>{t('sum.cplh')}</span><span className="v">{fmt(r.CPLH)}</span></div>
-      <div className="sum-row total"><span>{t('sum.kqkd')}</span><span className={`v ${r.KQKD >= 0 ? 'pos' : 'neg'}`}>{fmt(r.KQKD)}</span></div>
-      {row(t('sum.tsln'), r.TSLN * 100)}
+      <div className="sum-row total"><span>{t('sum.cplh')}</span><span className="v">{fmt(r.CPLH)} <span className="unit">USD</span></span></div>
+      <div className="sum-row total"><span>{t('sum.kqkd')}</span><span className={`v ${r.KQKD >= 0 ? 'pos' : 'neg'}`}>{fmt(r.KQKD)} <span className="unit">USD</span></span></div>
+      {row(t('sum.tsln'), r.TSLN * 100, '%')}
       <div className="helptext" style={{ marginTop: -8, marginBottom: 6 }}>{t('sum.tslnNote')}</div>
     </>
   );
