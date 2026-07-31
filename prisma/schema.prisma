@@ -13,7 +13,7 @@ model User {
   username  String   @unique
   password  String
   name      String
-  role        String   // sales | pricing | operation | manager | admin
+  role        String   // sales | pricing | operation | manager | accounting | admin
   notifyEmail String?  // email nhận thông báo workflow (do admin cài đặt)
   active      Boolean  @default(true) // false = tài khoản bị khoá tạm thời, không đăng nhập được nhưng dữ liệu vẫn giữ nguyên
   createdAt   DateTime @default(now())

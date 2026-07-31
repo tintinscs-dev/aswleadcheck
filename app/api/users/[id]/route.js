@@ -25,7 +25,7 @@ export async function PUT(req, { params }) {
 
   const data = {};
   if (body.name) data.name = body.name;
-  if (body.role && ['sales', 'pricing', 'operation', 'manager', 'admin'].includes(body.role)) data.role = body.role;
+  if (body.role && ['sales', 'pricing', 'operation', 'manager', 'accounting', 'admin'].includes(body.role)) data.role = body.role;
   if (body.password) data.password = await bcrypt.hash(body.password, 10);
   // notifyEmail: cho phép set rỗng ("") để xoá email
   if ('notifyEmail' in body) data.notifyEmail = body.notifyEmail || null;

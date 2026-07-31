@@ -16,7 +16,7 @@ const ACTION_LABELS = {
   created_from_template: 'Tạo từ mẫu',
 };
 
-const ROLE_LABEL = { sales: 'Sales', pricing: 'Pricing', operation: 'Operation', manager: 'Manager', admin: 'Admin' };
+const ROLE_LABEL = { sales: 'Sales', pricing: 'Pricing', operation: 'Operation', manager: 'Manager', accounting: 'Accounting', admin: 'Admin' };
 
 export default function ActivityClient({ events, users }) {
   const [filters, setFilters] = useState({ account: '', action: '', year: '', month: '', search: '' });
