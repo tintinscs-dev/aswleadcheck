@@ -3,10 +3,11 @@ import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
 import { sendTelegram, quoteNotifyText } from '../../../../../lib/telegram';
 import { sendEmailNotification } from '../../../../../lib/email';
+import { can } from '../../../../../lib/permissions';
 
 export async function POST(req, { params }) {
   const user = await requireUser();
-  if (!user || (user.role !== 'manager' && user.role !== 'admin')) {
+  if (!user || !(await can(user.role, 'approve_quote'))) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
   const { action, comment } = await req.json(); // action: 'approved' | 'rejected'

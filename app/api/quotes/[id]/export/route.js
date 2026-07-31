@@ -1,6 +1,7 @@
 import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
 import { buildExportWorkbook } from '../../../../../lib/excel';
+import { can } from '../../../../../lib/permissions';
 
 export async function GET(req, { params }) {
   const user = await requireUser();
@@ -8,7 +9,8 @@ export async function GET(req, { params }) {
 
   const quote = await prisma.quote.findUnique({ where: { id: params.id } });
   if (!quote) return new Response('not found', { status: 404 });
-  if (user.role === 'sales' && quote.createdById !== user.id) return new Response('forbidden', { status: 403 });
+  const canViewAll = await can(user.role, 'view_all_quotes');
+  if (!canViewAll && quote.createdById !== user.id) return new Response('forbidden', { status: 403 });
 
   const settings = (await prisma.settings.findUnique({ where: { id: 1 } })) || { exchangeRate: 23300, interestRatePct: 7.5, cpqlPct: 3 };
   const buffer = await buildExportWorkbook([quote], settings, user.name);

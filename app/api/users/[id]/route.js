@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../../../../lib/db';
 import { requireUser } from '../../../../lib/serverAuth';
+import { can } from '../../../../lib/permissions';
 
 export async function PUT(req, { params }) {
   const user = await requireUser();
-  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  if (!user || !(await can(user.role, 'manage_users'))) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   const body = await req.json();
 
   // An admin can rename/reset password for themselves, but must not be able
@@ -17,6 +18,18 @@ export async function PUT(req, { params }) {
   // Same reasoning for locking your own account — you'd have no admin left to unlock it.
   if (params.id === user.id && body.active === false) {
     return NextResponse.json({ error: 'Không thể tự khoá chính mình.' }, { status: 400 });
+  }
+
+  // If 'manage_users' was granted to a non-Admin role, keep it from touching
+  // Admin accounts or granting Admin — otherwise that role could escalate itself.
+  if (user.role !== 'admin') {
+    if (body.role === 'admin') {
+      return NextResponse.json({ error: 'Chỉ Admin được cấp quyền Admin.' }, { status: 403 });
+    }
+    const target = await prisma.user.findUnique({ where: { id: params.id }, select: { role: true } });
+    if (target?.role === 'admin') {
+      return NextResponse.json({ error: 'Chỉ Admin được sửa tài khoản Admin khác.' }, { status: 403 });
+    }
   }
 
   if (body.password && body.password.length < 6) {
@@ -44,8 +57,14 @@ export async function PUT(req, { params }) {
 
 export async function DELETE(req, { params }) {
   const user = await requireUser();
-  if (!user || user.role !== 'admin') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  if (!user || !(await can(user.role, 'manage_users'))) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   if (params.id === user.id) return NextResponse.json({ error: 'Không thể tự xoá chính mình.' }, { status: 400 });
+  if (user.role !== 'admin') {
+    const target = await prisma.user.findUnique({ where: { id: params.id }, select: { role: true } });
+    if (target?.role === 'admin') {
+      return NextResponse.json({ error: 'Chỉ Admin được xoá tài khoản Admin khác.' }, { status: 403 });
+    }
+  }
   await prisma.user.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }

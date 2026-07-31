@@ -1,12 +1,14 @@
 import { prisma } from '../../../../lib/db';
 import { requireUser } from '../../../../lib/serverAuth';
 import { buildExportWorkbook } from '../../../../lib/excel';
+import { can } from '../../../../lib/permissions';
 
 export async function GET() {
   const user = await requireUser();
   if (!user) return new Response('unauthorized', { status: 401 });
 
-  const where = user.role === 'sales' ? { createdById: user.id } : {};
+  const canViewAll = await can(user.role, 'view_all_quotes');
+  const where = canViewAll ? {} : { createdById: user.id };
   const quotes = await prisma.quote.findMany({ where, orderBy: { updatedAt: 'desc' } });
   if (!quotes.length) return new Response('Không có báo giá để xuất.', { status: 400 });
 

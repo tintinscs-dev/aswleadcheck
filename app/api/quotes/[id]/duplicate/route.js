@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
 import { DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../../../lib/calc';
+import { can } from '../../../../../lib/permissions';
 
 // Snapshot the current shared FX rate table — see matching helper in
 // app/api/quotes/route.js. A duplicated quote is a brand-new draft, so it
@@ -23,7 +24,8 @@ export async function POST(req, { params }) {
 
   const existing = await prisma.quote.findUnique({ where: { id: params.id } });
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
-  if (user.role === 'sales' && existing.createdById !== user.id) {
+  const canViewAll = await can(user.role, 'view_all_quotes');
+  if (!canViewAll && existing.createdById !== user.id) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 

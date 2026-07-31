@@ -5,16 +5,23 @@ import { prisma } from '../../lib/db';
 import Topbar from '../../components/Topbar';
 import Link from 'next/link';
 import { calcQuote, fmt } from '../../lib/calc';
+import { can } from '../../lib/permissions';
 
 export default async function ApprovalsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
   const user = session.user;
-  if (user.role !== 'manager' && user.role !== 'admin') redirect('/dashboard');
+  const canApproveQuote      = await can(user.role, 'approve_quote');
+  const canApproveAdjustment = await can(user.role, 'approve_adjustment');
+  if (!canApproveQuote && !canApproveAdjustment) redirect('/dashboard');
 
   const [pending, adjustments] = await Promise.all([
-    prisma.quote.findMany({ where: { status: 'pending' }, orderBy: { updatedAt: 'asc' } }),
-    prisma.quote.findMany({ where: { status: 'approved', pendingAdjustment: { not: null } }, orderBy: { updatedAt: 'asc' } }),
+    canApproveQuote
+      ? prisma.quote.findMany({ where: { status: 'pending' }, orderBy: { updatedAt: 'asc' } })
+      : [],
+    canApproveAdjustment
+      ? prisma.quote.findMany({ where: { status: 'approved', pendingAdjustment: { not: null } }, orderBy: { updatedAt: 'asc' } })
+      : [],
   ]);
   const quotes = JSON.parse(JSON.stringify(pending)).map(q => ({ ...q, kind: 'new' }));
   const adjQuotes = JSON.parse(JSON.stringify(adjustments)).map(q => ({ ...q, kind: 'adjustment' }));

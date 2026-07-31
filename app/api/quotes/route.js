@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../lib/db';
 import { requireUser } from '../../../lib/serverAuth';
 import { newQuoteData, DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../lib/calc';
+import { can } from '../../../lib/permissions';
 
 // Pull the current shared FX rate table to snapshot into a quote at save time —
 // so KQKD always reflects the rate in effect when the quote was last saved, even
@@ -19,7 +20,8 @@ export async function GET() {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-  const where = user.role === 'sales' ? { createdById: user.id } : {};
+  const canViewAll = await can(user.role, 'view_all_quotes');
+  const where = canViewAll ? {} : { createdById: user.id };
   const quotes = await prisma.quote.findMany({
     where,
     orderBy: { updatedAt: 'desc' },

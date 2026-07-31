@@ -1,6 +1,7 @@
 import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
 import { buildQuotePdf } from '../../../../../lib/pdf';
+import { can } from '../../../../../lib/permissions';
 
 export async function GET(req, { params }) {
   const user = await requireUser();
@@ -8,7 +9,8 @@ export async function GET(req, { params }) {
 
   const quote = await prisma.quote.findUnique({ where: { id: params.id } });
   if (!quote) return new Response('not found', { status: 404 });
-  if (user.role === 'sales' && quote.createdById !== user.id) return new Response('forbidden', { status: 403 });
+  const canViewAll = await can(user.role, 'view_all_quotes');
+  if (!canViewAll && quote.createdById !== user.id) return new Response('forbidden', { status: 403 });
 
   const buffer = await buildQuotePdf(quote, user.name);
 

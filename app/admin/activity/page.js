@@ -4,12 +4,13 @@ import { authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/db';
 import Topbar from '../../../components/Topbar';
 import ActivityClient from './ActivityClient';
+import { can } from '../../../lib/permissions';
 
 export default async function ActivityLogPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
   const user = session.user;
-  if (!['admin', 'manager'].includes(user.role)) redirect('/dashboard');
+  if (!(await can(user.role, 'view_activity_log'))) redirect('/dashboard');
 
   const [quotes, users] = await Promise.all([
     prisma.quote.findMany({

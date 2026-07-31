@@ -3,6 +3,7 @@ import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
 import { sendTelegram, quoteNotifyText } from '../../../../../lib/telegram';
 import { sendEmailNotification } from '../../../../../lib/email';
+import { can } from '../../../../../lib/permissions';
 
 /**
  * POST /api/quotes/[id]/pricing-review
@@ -11,12 +12,12 @@ import { sendEmailNotification } from '../../../../../lib/email';
  * pricing_approved → status becomes 'pending' (goes to Manager)
  * pricing_rejected → status returns to 'draft'  (Sales must revise)
  *
- * Allowed roles: pricing, admin
+ * Allowed roles: controlled by the 'pricing_review' permission (see /admin/permissions)
  */
 export async function POST(req, { params }) {
   const user = await requireUser();
-  if (!user || !['pricing', 'admin'].includes(user.role)) {
-    return NextResponse.json({ error: 'Chỉ Pricing hoặc Admin được thực hiện thao tác này.' }, { status: 403 });
+  if (!user || !(await can(user.role, 'pricing_review'))) {
+    return NextResponse.json({ error: 'Bạn không có quyền thực hiện thao tác này.' }, { status: 403 });
   }
 
   const { action, comment } = await req.json();

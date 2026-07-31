@@ -2,6 +2,7 @@ import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
 import { quoteToFormalTemplate } from '../../../../../lib/quotePrint';
 import { buildTemplatePdf } from '../../../../../lib/templatePdf';
+import { can } from '../../../../../lib/permissions';
 
 // Formal, customer-facing "In báo giá" PDF — built from the real saved
 // Quote's selling data (not the manual "Quote theo mẫu" tool).
@@ -11,7 +12,8 @@ export async function GET(req, { params }) {
 
   const quote = await prisma.quote.findUnique({ where: { id: params.id } });
   if (!quote) return new Response('not found', { status: 404 });
-  if (user.role === 'sales' && quote.createdById !== user.id) return new Response('forbidden', { status: 403 });
+  const canViewAll = await can(user.role, 'view_all_quotes');
+  if (!canViewAll && quote.createdById !== user.id) return new Response('forbidden', { status: 403 });
 
   const { searchParams } = new URL(req.url);
   const lang = searchParams.get('lang') === 'en' ? 'en' : 'vi';

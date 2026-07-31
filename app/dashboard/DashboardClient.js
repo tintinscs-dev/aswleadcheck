@@ -7,7 +7,7 @@ import { MODES, MODE_LABELS, calcQuote, quoteModes, fmt, statusLabel } from '../
 
 const PORTS = ['Hồ Chí Minh', 'Hải Phòng', 'Đà Nẵng', 'Vũng Tàu', 'Hà Nội'];
 
-export default function DashboardClient({ quotes, user }) {
+export default function DashboardClient({ quotes, user, canProposeAdjustment = false }) {
   const router = useRouter();
   const [copyingId, setCopyingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -284,8 +284,8 @@ export default function DashboardClient({ quotes, user }) {
             {rows.map(q => {
               const r = calcQuote(q);
               const canEdit = ((q.status === 'draft' || q.status === 'rejected') && (user.role === 'admin' || q.createdById === user.id))
-                || (q.status === 'approved' && ['admin', 'operation', 'pricing'].includes(user.role) && (!q.pendingAdjustment || user.role === 'admin'))
-                || (q.status === 'approved' && user.role === 'sales' && q.createdById === user.id && !q.pendingAdjustment);
+                || (q.status === 'approved' && canProposeAdjustment && (!q.pendingAdjustment || user.role === 'admin')
+                    && (user.role !== 'sales' || q.createdById === user.id));
               const canDelete = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
               return (
                 <tr key={q.id}>

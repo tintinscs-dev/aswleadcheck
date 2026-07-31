@@ -4,6 +4,7 @@ import { requireUser } from '../../../../../lib/serverAuth';
 import { DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../../../lib/calc';
 import { sendTelegram, quoteNotifyText } from '../../../../../lib/telegram';
 import { sendEmailNotification } from '../../../../../lib/email';
+import { can } from '../../../../../lib/permissions';
 
 async function currentFxRates() {
   try {
@@ -23,12 +24,12 @@ async function currentFxRates() {
  *   approve → merges the proposed data into the quote, clears the proposal
  *   reject  → discards the proposal, quote's live data is untouched
  *
- * Allowed roles: manager, admin
+ * Allowed roles: controlled by the 'approve_adjustment' permission (see /admin/permissions)
  */
 export async function POST(req, { params }) {
   const user = await requireUser();
-  if (!user || !['manager', 'admin'].includes(user.role)) {
-    return NextResponse.json({ error: 'Chỉ Manager hoặc Admin được duyệt điều chỉnh.' }, { status: 403 });
+  if (!user || !(await can(user.role, 'approve_adjustment'))) {
+    return NextResponse.json({ error: 'Bạn không có quyền duyệt điều chỉnh.' }, { status: 403 });
   }
 
   const { action, comment } = await req.json();

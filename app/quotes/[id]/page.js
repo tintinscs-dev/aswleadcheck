@@ -5,6 +5,7 @@ import { prisma } from '../../../lib/db';
 import Topbar from '../../../components/Topbar';
 import QuoteForm from '../QuoteForm';
 import { DEFAULT_FX_RATES } from '../../../lib/calc';
+import { can } from '../../../lib/permissions';
 
 export default async function EditQuotePage({ params }) {
   const session = await getServerSession(authOptions);
@@ -23,11 +24,13 @@ export default async function EditQuotePage({ params }) {
     systemFxRates = { ...DEFAULT_FX_RATES, ...(settings?.fxRates || {}) };
   } catch (e) {}
 
+  const canEditFees = await can(user.role, 'propose_adjustment');
+
   return (
     <div>
       <Topbar user={user} />
       <div className="page">
-        <QuoteForm initialQuote={JSON.parse(JSON.stringify(quote))} quoteId={quote.id} currentUser={user} systemFxRates={systemFxRates} />
+        <QuoteForm initialQuote={JSON.parse(JSON.stringify(quote))} quoteId={quote.id} currentUser={user} systemFxRates={systemFxRates} canEditFees={canEditFees} />
       </div>
     </div>
   );

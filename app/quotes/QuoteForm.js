@@ -234,7 +234,7 @@ function InternalDataPanel({ t }) {
   );
 }
 
-export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFxRates }) {
+export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFxRates, canEditFees = false }) {
   const router = useRouter();
   const { t } = useLang();
   const [q, setQ] = useState(() => migrateQuote(initialQuote || newQuoteData()));
@@ -255,7 +255,7 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
   // While a proposal is already pending, only Admin can keep editing.
   const hasPendingAdjustment = isApproved && !!q.pendingAdjustment;
   const blockedByPendingAdjustment = hasPendingAdjustment && currentUser.role !== 'admin';
-  const feesReadonly = isApproved && (!['admin', 'operation', 'pricing', 'sales'].includes(currentUser.role) || blockedByPendingAdjustment);
+  const feesReadonly = isApproved && (!canEditFees || blockedByPendingAdjustment);
   const canAdjustFees = isApproved && !feesReadonly;
   const r = useMemo(() => calcQuote(q), [q]);
 

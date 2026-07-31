@@ -11,6 +11,7 @@ import PricingBox from './PricingBox';
 import AdjustmentApproveBox from './AdjustmentApproveBox';
 import CopyButton from './CopyButton';
 import DeleteButton from './DeleteButton';
+import { can } from '../../../../lib/permissions';
 
 const ACTION_LABELS = {
   submitted:            'GỬI KIỂM TRA GIÁ MUA',
@@ -31,17 +32,20 @@ export default async function QuoteViewPage({ params }) {
 
   const quote = await prisma.quote.findUnique({ where: { id: params.id } });
   if (!quote) notFound();
-  // pricing role can view all quotes (they need to see them to check costs)
-  if (user.role === 'sales' && quote.createdById !== user.id) redirect('/dashboard');
+  // Roles without 'view_all_quotes' only see their own — see /admin/permissions.
+  const canViewAll = await can(user.role, 'view_all_quotes');
+  if (!canViewAll && quote.createdById !== user.id) redirect('/dashboard');
 
   const q = migrateQuote(JSON.parse(JSON.stringify(quote)));
   const r = calcQuote(q);
 
-  const canPricingReview = ['pricing', 'admin'].includes(user.role) && q.status === 'pricing_review';
-  const canApprove       = ['manager', 'admin'].includes(user.role) && q.status === 'pending';
+  const canPricingReview = (await can(user.role, 'pricing_review')) && q.status === 'pricing_review';
+  const canApprove       = (await can(user.role, 'approve_quote')) && q.status === 'pending';
   const hasPendingAdjustment  = q.status === 'approved' && !!q.pendingAdjustment;
-  const canAdjustFees        = q.status === 'approved' && ['admin', 'operation', 'pricing', 'sales'].includes(user.role) && (!hasPendingAdjustment || user.role === 'admin');
-  const canApproveAdjustment = hasPendingAdjustment && ['manager', 'admin'].includes(user.role);
+  const canProposeAdjustment = await can(user.role, 'propose_adjustment');
+  const canAdjustFees        = q.status === 'approved' && canProposeAdjustment
+    && (user.role !== 'sales' || q.createdById === user.id) && (!hasPendingAdjustment || user.role === 'admin');
+  const canApproveAdjustment = hasPendingAdjustment && (await can(user.role, 'approve_adjustment'));
   const canDelete        = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
 
   const history = Array.isArray(q.history) ? q.history.slice().reverse() : [];

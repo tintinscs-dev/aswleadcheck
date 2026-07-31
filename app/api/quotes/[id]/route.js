@@ -5,6 +5,7 @@ import { diffQuoteCosts } from '../../../../lib/diff';
 import { DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../../lib/calc';
 import { sendTelegram, quoteNotifyText } from '../../../../lib/telegram';
 import { sendEmailNotification } from '../../../../lib/email';
+import { can } from '../../../../lib/permissions';
 
 // Snapshot the current shared FX rate table into the quote on every save — see
 // the matching helper/comment in app/api/quotes/route.js.
@@ -23,7 +24,8 @@ async function loadQuote(id, user) {
     include: { createdBy: { select: { name: true, username: true } } },
   });
   if (!quote) return null;
-  if (user.role === 'sales' && quote.createdById !== user.id) return 'forbidden';
+  const canViewAll = await can(user.role, 'view_all_quotes');
+  if (!canViewAll && quote.createdById !== user.id) return 'forbidden';
   return quote;
 }
 
@@ -36,20 +38,15 @@ export async function GET(req, { params }) {
   return NextResponse.json(quote);
 }
 
-// Roles allowed to touch fee tables on an already-approved quote at all.
-// (Sales is further restricted to their own quotes by loadQuote() above.)
-const FEE_EDITOR_ROLES = ['admin', 'operation', 'pricing', 'sales'];
-// Of those, which ones apply their change immediately vs. only propose it.
-const IMMEDIATE_FEE_EDITOR_ROLES = ['admin'];
-
 export async function PUT(req, { params }) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const existing = await loadQuote(params.id, user);
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
   if (existing === 'forbidden') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  if (existing.status === 'approved' && !FEE_EDITOR_ROLES.includes(user.role)) {
-    return NextResponse.json({ error: 'Báo giá đã duyệt — chỉ Admin/Operation/Pricing/Sales (báo giá của mình) được điều chỉnh phí.' }, { status: 403 });
+  const canProposeAdjustment = await can(user.role, 'propose_adjustment');
+  if (existing.status === 'approved' && !canProposeAdjustment) {
+    return NextResponse.json({ error: 'Báo giá đã duyệt — bạn không có quyền điều chỉnh phí (xem trang Phân quyền).' }, { status: 403 });
   }
 
   const body = await req.json();
@@ -62,7 +59,7 @@ export async function PUT(req, { params }) {
     targetStatus = 'approved';
     const changes = diffQuoteCosts(existing, rest);
 
-    if (IMMEDIATE_FEE_EDITOR_ROLES.includes(user.role)) {
+    if (user.role === 'admin') {
       // Admin: applies immediately, and supersedes/clears any proposal still
       // awaiting Manager approval (admin's direct edit is authoritative).
       if (changes.length > 0) {

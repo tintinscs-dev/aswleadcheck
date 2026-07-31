@@ -80,3 +80,16 @@ model Settings {
   fxUpdatedAt     DateTime?
   fxUpdatedBy     String?
 }
+
+// Per-role permission overrides for the toggleable "Phân quyền" admin screen.
+// Absence of a row for a given (role, action) means "use the hard-coded default"
+// — see lib/permissions.js DEFAULT_PERMISSIONS. Admin is never stored here; it
+// always has every permission, enforced in code as a safety net.
+model RolePermission {
+  id      String  @id @default(cuid())
+  role    String
+  action  String
+  allowed Boolean @default(true)
+
+  @@unique([role, action])
+}

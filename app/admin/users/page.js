@@ -4,11 +4,12 @@ import { authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/db';
 import Topbar from '../../../components/Topbar';
 import UsersClient from './UsersClient';
+import { can } from '../../../lib/permissions';
 
 export default async function AdminUsersPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect('/login');
-  if (session.user.role !== 'admin') redirect('/dashboard');
+  if (!(await can(session.user.role, 'manage_users'))) redirect('/dashboard');
 
   const users = await prisma.user.findMany({
     select: { id: true, username: true, name: true, role: true, notifyEmail: true, active: true, createdAt: true },
