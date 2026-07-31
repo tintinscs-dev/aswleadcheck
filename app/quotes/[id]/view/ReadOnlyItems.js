@@ -1,4 +1,27 @@
-import { MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode } from '../../../../lib/calc';
+import { MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode, calcQuote } from '../../../../lib/calc';
+
+function debtInsight(r) {
+  const financeCost = (r.CPCN_total || 0) + (r.CPCH_interest || 0);
+  if (financeCost <= 0) {
+    return { financeCost, level: 'ok', text: 'Không phát sinh chi phí công nợ / tài chính cho lô hàng này.' };
+  }
+  if (r.KQKD <= 0) {
+    return { financeCost, level: 'danger', text: 'Lô hàng đang lỗ trước cả chi phí công nợ — cần xem lại giá bán trước khi tính đến việc rút ngắn công nợ.' };
+  }
+  const ratio = (financeCost / r.KQKD) * 100;
+  let level, text;
+  if (ratio < 10) {
+    level = 'ok';
+    text = `Chi phí công nợ chiếm ${fmt(ratio)}% lợi nhuận (KQKD) — mức thấp, không đáng lo ngại.`;
+  } else if (ratio < 25) {
+    level = 'warn';
+    text = `Chi phí công nợ chiếm ${fmt(ratio)}% lợi nhuận (KQKD) — mức trung bình, nên cân nhắc khi đàm phán thời hạn thanh toán với khách.`;
+  } else {
+    level = 'danger';
+    text = `Chi phí công nợ chiếm ${fmt(ratio)}% lợi nhuận (KQKD) — khá cao, đang ăn phần lớn lợi nhuận. Nên rút ngắn số ngày công nợ hoặc tăng giá bán để bù đắp.`;
+  }
+  return { financeCost, ratio, level, text };
+}
 
 function Row({ label, item, qty }) {
   const total = lineTotal(item, qty, +1);
@@ -46,14 +69,16 @@ function CostTable({ side, mode, q }) {
 
 export default function ReadOnlyItems({ q }) {
   const modes = quoteModes(q);
+  const r = calcQuote(q);
+  const insight = debtInsight(r);
   return (
     <>
       {modes.map(mode => (
         <div className="card" key={mode}>
           <h4 style={{ marginTop: 0 }}>{MODE_LABELS[mode]}</h4>
           <div className="grid grid-2">
-            <div><div className="sum-section-title">II. Giá mua (Cost)</div><CostTable side="buying" mode={mode} q={q} /></div>
-            <div><div className="sum-section-title">III. Giá bán (Sell)</div><CostTable side="selling" mode={mode} q={q} /></div>
+            <div style={{ minWidth: 0 }}><div className="sum-section-title">II. Giá mua (Cost)</div><CostTable side="buying" mode={mode} q={q} /></div>
+            <div style={{ minWidth: 0 }}><div className="sum-section-title">III. Giá bán (Sell)</div><CostTable side="selling" mode={mode} q={q} /></div>
           </div>
         </div>
       ))}
@@ -70,6 +95,10 @@ export default function ReadOnlyItems({ q }) {
           <div><b>Chi hộ khác (USD):</b> {fmt(q.chiHoKhac)}</div>
           <div><b>Số ngày nợ chi hộ khác:</b> {fmt(q.creditDaysChiHoKhac)}</div>
           <div><b>CP Khác (USD):</b> {fmt(q.cpKhac)}</div>
+        </div>
+        <div className={`debt-insight debt-insight-${insight.level}`}>
+          <div className="di-row">Tổng chi phí công nợ / tài chính: {fmt(insight.financeCost)} USD</div>
+          <div>{insight.text}</div>
         </div>
       </div>
     </>
