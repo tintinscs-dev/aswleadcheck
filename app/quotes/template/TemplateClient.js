@@ -81,7 +81,7 @@ export default function TemplateClient() {
     <div>
       <h2>Quote theo mẫu</h2>
       <div className="pagesub">
-        Nhập tay hoặc import Excel/PDF theo mẫu &quot;CUSTOMER &amp; SHIPMENT INFORMATION / FREIGHT &amp; CHARGES / LOCAL CHARGES / Customs and Trucking&quot;.
+        Nhập tay hoặc import Excel/PDF theo mẫu &quot;CUSTOMER &amp; SHIPMENT INFORMATION / OVERSEAS CHARGES / FREIGHT &amp; CHARGES / LOCAL CHARGES / Customs and Trucking&quot;. Mục OVERSEAS CHARGES chỉ hiện trên báo giá xuất ra nếu có nhập dòng nào.
         Sau khi xong, bấm &quot;Tạo báo giá&quot; để hệ thống tự tạo 1 báo giá nháp từ dữ liệu này — bạn kiểm tra/sửa số liệu trong màn hình báo giá như bình thường rồi gửi duyệt.
       </div>
       {err && <div className="login-err">{err}</div>}

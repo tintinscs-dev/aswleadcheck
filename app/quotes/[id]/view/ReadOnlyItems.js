@@ -67,12 +67,48 @@ function CostTable({ side, mode, q }) {
   );
 }
 
+function OverseasTable({ side, mode, q }) {
+  const modeData = q[side]?.[mode];
+  const data = (modeData && Object.keys(modeData).length > 1 ? modeData : null)
+    || (mode === 'lcl' ? q[side]?.lclair : null)
+    || modeData
+    || {};
+  const qty = qtyForMode(mode, q);
+  const rows = (data.overseasItems || []).map((oi, idx) => ({ key: `overseas-${idx}`, label: oi.label || '(Chưa đặt tên)', item: oi })).filter(r => !isZeroItem(r.item));
+  if (!rows.length) {
+    return <div className="custom-item-note">Không có chi phí nào được nhập.</div>;
+  }
+  return (
+    <table className="item-table">
+      <thead><tr><th style={{ width: '24%' }}>Hạng mục</th><th>Đơn giá</th><th>Đơn vị tính</th><th>VAT%</th><th>Tiền</th><th>Thành tiền</th><th style={{ width: '16%' }}>Ghi chú</th></tr></thead>
+      <tbody>
+        {rows.map(r => <Row key={r.key} label={r.label} item={r.item} qty={qty} />)}
+      </tbody>
+    </table>
+  );
+}
+
+function hasOverseasData(q, mode) {
+  const b = q.buying?.[mode]?.overseasItems || [];
+  const s = q.selling?.[mode]?.overseasItems || [];
+  return [...b, ...s].some(it => Number(it?.price || 0));
+}
+
 export default function ReadOnlyItems({ q }) {
   const modes = quoteModes(q);
   const r = calcQuote(q);
   const insight = debtInsight(r);
   return (
     <>
+      {modes.map(mode => hasOverseasData(q, mode) && (
+        <div className="card" key={`overseas-${mode}`}>
+          <h4 style={{ marginTop: 0 }}>I. Overseas Charges (Chi phí đầu nước ngoài) — {MODE_LABELS[mode]}</h4>
+          <div className="grid grid-2">
+            <div style={{ minWidth: 0 }}><div className="sum-section-title">Giá mua (Cost)</div><OverseasTable side="buying" mode={mode} q={q} /></div>
+            <div style={{ minWidth: 0 }}><div className="sum-section-title">Giá bán (Sell)</div><OverseasTable side="selling" mode={mode} q={q} /></div>
+          </div>
+        </div>
+      ))}
       {modes.map(mode => (
         <div className="card" key={mode}>
           <h4 style={{ marginTop: 0 }}>{MODE_LABELS[mode]}</h4>

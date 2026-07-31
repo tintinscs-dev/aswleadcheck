@@ -165,6 +165,47 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
   );
 }
 
+function OverseasItemRow({ side, mode, idx, item, onChange, onRemove }) {
+  const p = `${side}.${mode}.overseasItems.${idx}`;
+  return (
+    <tr className="custom-item-row">
+      <td className="item-name"><input type="text" placeholder="Tên khoản phí (VD: Destination THC)..." value={item.label || ''} onChange={e => onChange(`${p}.label`, e.target.value)} /></td>
+      <td><MoneyInput value={item.price || 0} onChange={v => onChange(`${p}.price`, v)} /></td>
+      <td><UnitSelect mode={mode} value={item.unit} onChange={v => onChange(`${p}.unit`, v)} /></td>
+      <td><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
+      <td style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        <CurrencySelect value={item.currency} onChange={v => onChange(`${p}.currency`, v)} />
+        <button type="button" title="Xóa khoản phí" onClick={onRemove}>✕</button>
+      </td>
+      <td><input type="text" placeholder="Ghi chú..." value={item.note || ''} onChange={e => onChange(`${p}.note`, e.target.value)} /></td>
+    </tr>
+  );
+}
+
+function OverseasItemsTable({ side, mode, q, onChange, onAddOverseas, onRemoveOverseas, disabled, t }) {
+  const data = q[side]?.[mode] || {};
+  return (
+    <>
+      <table className="item-table">
+        <thead><tr>
+          <th style={{ width: '26%' }}>{t('table.col.item')}</th>
+          <th>{t('table.col.price')}</th>
+          <th style={{ width: 110 }}>{t('table.col.unit')}</th>
+          <th>{t('table.col.vat')}</th>
+          <th style={{ width: 70 }}>{t('table.col.currency')}</th>
+          <th style={{ width: '16%' }}>{t('table.col.note')}</th>
+        </tr></thead>
+        <tbody>
+          {(data.overseasItems || []).map((oi, idx) => (
+            <OverseasItemRow key={idx} side={side} mode={mode} idx={idx} item={oi} onChange={onChange} onRemove={() => onRemoveOverseas(side, mode, idx)} />
+          ))}
+        </tbody>
+      </table>
+      <button type="button" className="btn-add-item" onClick={() => onAddOverseas(side, mode)}>{t('table.addItem')}</button>
+    </>
+  );
+}
+
 function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, disabled, t }) {
   const data = q[side]?.[mode] || {};
   const defs = itemDefsForMode(mode);
@@ -273,6 +314,21 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
     setQ(prev => {
       const next = structuredClone(prev);
       next[side][mode].customItems.splice(idx, 1);
+      return next;
+    });
+  }
+  function onAddOverseas(side, mode) {
+    setQ(prev => {
+      const next = structuredClone(prev);
+      if (!next[side][mode].overseasItems) next[side][mode].overseasItems = [];
+      next[side][mode].overseasItems.push(blankCustomItem());
+      return next;
+    });
+  }
+  function onRemoveOverseas(side, mode, idx) {
+    setQ(prev => {
+      const next = structuredClone(prev);
+      next[side][mode].overseasItems.splice(idx, 1);
       return next;
     });
   }
@@ -403,6 +459,26 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
               {MODES.map(m => <button type="button" key={m} className={tabMode === m ? 'active' : ''} onClick={() => setTabMode(m)}>{MODE_LABELS[m]}</button>)}
               <button type="button" className={tabMode === 'internal' ? 'active' : ''} onClick={() => setTabMode('internal')}>{t('tab.internalData')}</button>
             </div>
+            {tabMode !== 'internal' && (
+              <>
+                <h3>{t('sec1.title')}</h3>
+                <div className="helptext" style={{ marginBottom: 8 }}>{t('table.overseasNote')}</div>
+                <div className="grid-buysell">
+                  <div>
+                    <div className="sum-section-title">{t('sec2.title').replace(/^II\.\s*/, '')}</div>
+                    <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                      <OverseasItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />
+                    </fieldset>
+                  </div>
+                  <div>
+                    <div className="sum-section-title">{t('sec3.title').replace(/^III\.\s*/, '')}</div>
+                    <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                      <OverseasItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />
+                    </fieldset>
+                  </div>
+                </div>
+              </>
+            )}
             {tabMode === 'internal' ? (
               <InternalDataPanel t={t} />
             ) : (
