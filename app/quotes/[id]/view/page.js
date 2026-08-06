@@ -139,7 +139,7 @@ export default async function QuoteViewPage({ params }) {
               )}
             </div>
           </div>
-          <div className="summary-panel">
+          <div className="summary-panel desktop-only">
             <div className="card">
               <h3>Kết quả tính toán</h3>
               <SummaryInner r={r} />

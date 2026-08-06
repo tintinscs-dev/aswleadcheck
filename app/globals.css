@@ -112,6 +112,33 @@ tbody tr:hover{background:#f7faff;}
 .grid-buysell h3{margin-top:0;}
 @media(max-width:1400px){.grid-buysell{grid-template-columns:1fr;gap:20px;}}
 
+/* Swipe carousel — Costing / Billing / Kết quả tính toán.
+   Desktop keeps the familiar side-by-side grid (untouched look);
+   only on small screens does it become a swipeable, scroll-snapped strip. */
+.swipe-carousel{min-width:0;}
+.swipe-tabs{display:none;}
+.swipe-dots{display:none;}
+.swipe-track{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;min-width:0;}
+.swipe-track>.swipe-panel{min-width:0;}
+.swipe-track>.swipe-panel.mobile-only{display:none;}
+
+@media(max-width:768px){
+  .swipe-tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .swipe-tabs::-webkit-scrollbar{display:none;}
+  .swipe-tabs button{flex:0 0 auto;background:#eef2f8;border:none;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;color:var(--navy2);white-space:nowrap;cursor:pointer;}
+  .swipe-tabs button.active{background:var(--accent);color:#fff;}
+  .swipe-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;gap:0;}
+  .swipe-track>.swipe-panel{flex:0 0 100%;scroll-snap-align:start;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .swipe-track>.swipe-panel.mobile-only{display:block;}
+  .swipe-track>.swipe-panel+.swipe-panel{padding-left:14px;}
+  .swipe-dots{display:flex;justify-content:center;gap:6px;margin-top:10px;}
+  .swipe-dot{width:7px;height:7px;border-radius:50%;background:var(--border);cursor:pointer;}
+  .swipe-dot.active{background:var(--accent);width:18px;border-radius:4px;}
+  /* Result summary is reachable by swiping to it from within Costing/Billing,
+     so don't also show the separate desktop sidebar copy underneath on mobile. */
+  .summary-panel.desktop-only{display:none;}
+}
+
 .layout-form{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start;}
 @media(max-width:1100px){.layout-form{grid-template-columns:1fr;}}
 .summary-panel{position:sticky;top:74px;}

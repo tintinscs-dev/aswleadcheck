@@ -1,4 +1,6 @@
 import { MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode, calcQuote } from '../../../../lib/calc';
+import SwipeCarousel from '../../../../components/SwipeCarousel';
+import { SummaryInner } from '../../QuoteForm';
 
 function debtInsight(r) {
   const financeCost = (r.CPCN_total || 0) + (r.CPCH_interest || 0);
@@ -103,19 +105,20 @@ export default function ReadOnlyItems({ q }) {
       {modes.map(mode => hasOverseasData(q, mode) && (
         <div className="card" key={`overseas-${mode}`}>
           <h4 style={{ marginTop: 0 }}>I. Overseas Charges (Chi phí đầu nước ngoài) — {MODE_LABELS[mode]}</h4>
-          <div className="grid grid-2">
-            <div style={{ minWidth: 0 }}><div className="sum-section-title">Giá mua (Cost)</div><OverseasTable side="buying" mode={mode} q={q} /></div>
-            <div style={{ minWidth: 0 }}><div className="sum-section-title">Giá bán (Sell)</div><OverseasTable side="selling" mode={mode} q={q} /></div>
-          </div>
+          <SwipeCarousel panels={[
+            { key: 'costing', label: 'Giá mua (Cost)', content: (<><div className="sum-section-title">Giá mua (Cost)</div><OverseasTable side="buying" mode={mode} q={q} /></>) },
+            { key: 'billing', label: 'Giá bán (Sell)', content: (<><div className="sum-section-title">Giá bán (Sell)</div><OverseasTable side="selling" mode={mode} q={q} /></>) },
+          ]} />
         </div>
       ))}
       {modes.map(mode => (
         <div className="card" key={mode}>
           <h4 style={{ marginTop: 0 }}>{MODE_LABELS[mode]}</h4>
-          <div className="grid grid-2">
-            <div style={{ minWidth: 0 }}><div className="sum-section-title">II. Giá mua (Cost)</div><CostTable side="buying" mode={mode} q={q} /></div>
-            <div style={{ minWidth: 0 }}><div className="sum-section-title">III. Giá bán (Sell)</div><CostTable side="selling" mode={mode} q={q} /></div>
-          </div>
+          <SwipeCarousel panels={[
+            { key: 'costing', label: 'Giá mua (Cost)', content: (<><div className="sum-section-title">II. Giá mua (Cost)</div><CostTable side="buying" mode={mode} q={q} /></>) },
+            { key: 'billing', label: 'Giá bán (Sell)', content: (<><div className="sum-section-title">III. Giá bán (Sell)</div><CostTable side="selling" mode={mode} q={q} /></>) },
+            { key: 'result', label: 'Kết quả tính toán', mobileOnly: true, content: (<><div className="sum-section-title">Kết quả tính toán</div><SummaryInner r={r} /></>) },
+          ]} />
         </div>
       ))}
       <div className="card">

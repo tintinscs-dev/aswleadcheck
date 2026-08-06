@@ -8,6 +8,7 @@ import {
   priceSuggestionNote, TARIFF_SUGGEST,
 } from '../../lib/calc';
 import { useLang } from '../../components/LangContext';
+import SwipeCarousel from '../../components/SwipeCarousel';
 
 function CurrencySelect({ value, onChange }) {
   return (
@@ -463,39 +464,74 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
               <>
                 <h3>{t('sec1.title')}</h3>
                 <div className="helptext" style={{ marginBottom: 8 }}>{t('table.overseasNote')}</div>
-                <div className="grid-buysell">
-                  <div>
-                    <div className="sum-section-title">{t('sec2.title').replace(/^II\.\s*/, '')}</div>
-                    <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                      <OverseasItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />
-                    </fieldset>
-                  </div>
-                  <div>
-                    <div className="sum-section-title">{t('sec3.title').replace(/^III\.\s*/, '')}</div>
-                    <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                      <OverseasItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />
-                    </fieldset>
-                  </div>
-                </div>
+                <SwipeCarousel panels={[
+                  {
+                    key: 'overseas-buying',
+                    label: t('sec2.title').replace(/^II\.\s*/, ''),
+                    content: (
+                      <>
+                        <div className="sum-section-title">{t('sec2.title').replace(/^II\.\s*/, '')}</div>
+                        <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                          <OverseasItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />
+                        </fieldset>
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'overseas-selling',
+                    label: t('sec3.title').replace(/^III\.\s*/, ''),
+                    content: (
+                      <>
+                        <div className="sum-section-title">{t('sec3.title').replace(/^III\.\s*/, '')}</div>
+                        <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                          <OverseasItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />
+                        </fieldset>
+                      </>
+                    ),
+                  },
+                ]} />
               </>
             )}
             {tabMode === 'internal' ? (
               <InternalDataPanel t={t} />
             ) : (
-              <div className="grid-buysell">
-                <div>
-                  <h3>{t('sec2.title')}</h3>
-                  <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                    <ModeItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
-                  </fieldset>
-                </div>
-                <div>
-                  <h3>{t('sec3.title')}</h3>
-                  <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                    <ModeItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
-                  </fieldset>
-                </div>
-              </div>
+              <SwipeCarousel panels={[
+                {
+                  key: 'costing',
+                  label: t('sec2.title'),
+                  content: (
+                    <>
+                      <h3>{t('sec2.title')}</h3>
+                      <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                        <ModeItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
+                      </fieldset>
+                    </>
+                  ),
+                },
+                {
+                  key: 'billing',
+                  label: t('sec3.title'),
+                  content: (
+                    <>
+                      <h3>{t('sec3.title')}</h3>
+                      <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                        <ModeItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
+                      </fieldset>
+                    </>
+                  ),
+                },
+                {
+                  key: 'result',
+                  label: t('sum.title'),
+                  mobileOnly: true,
+                  content: (
+                    <>
+                      <h3>{t('sum.title')}</h3>
+                      <SummaryInner r={r} />
+                    </>
+                  ),
+                },
+              ]} />
             )}
           </div>
 
@@ -551,7 +587,7 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
           )}
         </div>
 
-        <div className="summary-panel">
+        <div className="summary-panel desktop-only">
           <div className="card">
             <h3>{t('sum.title')}</h3>
             <SummaryInner r={r} />
