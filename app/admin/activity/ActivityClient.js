@@ -93,7 +93,7 @@ export default function ActivityClient({ events, users }) {
                 <td>{ROLE_LABEL[e.role] || e.role}</td>
                 <td><Link href={`/quotes/${e.quoteId}/view`}>{e.quoteNo}</Link></td>
                 <td>{e.route}</td>
-                <td>{e.sales}</td>
+                <td><span className="sales-name">{e.sales}</span></td>
                 <td>{ACTION_LABELS[e.action] || e.action}</td>
                 <td>
                   {e.comment && <div>{e.comment}</div>}

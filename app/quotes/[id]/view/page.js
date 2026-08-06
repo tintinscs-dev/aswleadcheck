@@ -59,11 +59,9 @@ export default async function QuoteViewPage({ params }) {
           {hasPendingAdjustment && <span className="badge badge-pricing_review" style={{ marginLeft: 6 }}>⏳ Chờ duyệt điều chỉnh</span>}
         </h2>
         <div className="pagesub">
-          {[
-            (q.shpr || q.cnee) && [q.shpr, q.cnee].filter(Boolean).join(' → '),
-            (q.pol || q.pod) && [q.pol, q.pod].filter(Boolean).join(' → '),
-            `Sales: ${q.sales || '-'}`,
-          ].filter(Boolean).join('  |  ')}
+          {(q.shpr || q.cnee) && <>{[q.shpr, q.cnee].filter(Boolean).join(' → ')}{'  |  '}</>}
+          {(q.pol || q.pod) && <>{[q.pol, q.pod].filter(Boolean).join(' → ')}{'  |  '}</>}
+          Sales: <span className="sales-name">{q.sales || '-'}</span>
         </div>
         <div className="layout-form">
           <div>

@@ -294,7 +294,7 @@ export default function DashboardClient({ quotes, user, canProposeAdjustment = f
                   <td>{q.shpr || '-'}</td>
                   <td>{q.cnee || '-'}</td>
                   <td>{q.pol || '-'} → {q.pod || '-'}</td>
-                  <td>{q.sales || '-'}</td>
+                  <td><span className="sales-name">{q.sales || '-'}</span></td>
                   <td>
                     <span className={`badge badge-${q.status}`}>{statusLabel(q.status)}</span>
                     {q.pendingAdjustment && <span className="badge badge-pricing_review" style={{ marginLeft: 4 }}>⏳ Điều chỉnh</span>}

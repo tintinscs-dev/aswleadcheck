@@ -47,7 +47,7 @@ export default async function ApprovalsPage() {
                       ? <span className="badge badge-pricing_review">⏳ Điều chỉnh phí</span>
                       : <span className="badge badge-pending">Báo giá mới</span>}</td>
                     <td>{q.shpr || '-'}</td><td>{q.cnee || '-'}</td><td>{q.pol} → {q.pod}</td>
-                    <td>{q.sales || '-'}</td>
+                    <td><span className="sales-name">{q.sales || '-'}</span></td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: r.KQKD >= 0 ? 'var(--ok)' : 'var(--danger)' }}>{fmt(r.KQKD)}</td>
                     <td><Link href={`/quotes/${q.id}/view`}><button className="btn btn-outline btn-sm">Xem &amp; Duyệt</button></Link></td>
                   </tr>
