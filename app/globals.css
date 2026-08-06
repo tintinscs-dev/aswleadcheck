@@ -46,8 +46,24 @@ body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg
 .btn-lang{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.35);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11.5px;font-weight:700;letter-spacing:.5px;}
 .btn-lang:hover{background:rgba(255,255,255,.28);}
 
+/* Topbar was wrapping the brand name onto 3 lines on phones and spilling
+   over the page content below it. Keep it a single row: truncate the
+   brand, let the nav scroll sideways instead of wrapping, and drop the
+   least essential bits of the user box. */
+@media(max-width:700px){
+  .topbar{height:auto;min-height:52px;padding:8px 12px;gap:8px;flex-wrap:nowrap;}
+  .topbar .brand{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34vw;flex:0 0 auto;}
+  .topnav{flex:1 1 auto;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .topnav::-webkit-scrollbar{display:none;}
+  .topnav button{padding:6px 10px;font-size:12px;white-space:nowrap;}
+  .topbar .userbox{flex:0 0 auto;gap:6px;}
+  .topbar .userbox>span:not(.role-badge){display:none;}
+  .topbar .userbox .logout{padding:6px 9px;font-size:11px;}
+}
+
 .page{max-width:1800px;margin:0 auto;padding:22px 32px;}
 @media(max-width:1860px){.page{max-width:none;}}
+@media(max-width:700px){.page{padding:14px;}}
 .page h2{margin:0 0 4px;color:var(--navy);font-size:19px;}
 .page .pagesub{color:var(--muted);font-size:12.5px;margin-bottom:18px;}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;}
@@ -58,6 +74,7 @@ body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg
 .grid-4{grid-template-columns:repeat(4,1fr);}
 .grid-6{grid-template-columns:repeat(6,1fr);}
 @media(max-width:900px){.grid-3,.grid-4,.grid-6{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:480px){.grid-2,.grid-3,.grid-4,.grid-6{grid-template-columns:1fr;}}
 
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
@@ -97,6 +114,20 @@ tbody tr:hover{background:#f7faff;}
 .currency-select{width:100%;min-width:60px;padding:5px 5px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);}
 .item-table .item-name{font-weight:600;color:var(--text);white-space:normal;word-break:break-word;line-height:1.3;padding-top:9px;}
 .item-table .lt{text-align:right;font-weight:700;color:var(--navy);white-space:nowrap;}
+
+/* On narrow phones, a 6-7 column table has no room to breathe and its
+   header text overlaps. Below 768px, turn each row into a labelled card
+   instead: label:value pairs stacked, using each td's data-label. */
+@media(max-width:768px){
+  .item-table thead{display:none;}
+  .item-table, .item-table tbody, .item-table tr{display:block;width:100%;}
+  .item-table tr{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px 4px;margin-bottom:10px;}
+  .item-table td{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 10px;padding:6px 0;border-bottom:1px dashed var(--bg);white-space:normal;}
+  .item-table td:last-child{border-bottom:none;}
+  .item-table td[data-label]::before{content:attr(data-label);flex:0 0 78px;padding-top:3px;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;}
+  .item-table td[data-label]>*{flex:1;min-width:120px;}
+  .item-table td.item-name{display:block;font-size:14px;padding-top:0;}
+}
 .custom-item-row .item-name input{font-weight:600;}
 .custom-item-row td button{background:#fff;border:1px solid var(--border);border-radius:5px;cursor:pointer;color:#b42318;padding:4px 7px;}
 .btn-add-item{margin-top:8px;background:#fff;border:1px dashed var(--navy2);color:var(--navy2);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12.5px;}

@@ -137,14 +137,14 @@ function ItemRow({ mode, side, pathPrefix, def, item, onChange, disabled }) {
   return (
     <tr>
       <td className="item-name">{def.label}</td>
-      <td>
+      <td data-label="Giá">
         <MoneyInput value={item.price || 0} disabled={disabled} onChange={v => onChange(`${pathPrefix}.price`, v)} />
         <PriceNote note={note} />
       </td>
-      <td><UnitSelect mode={mode} value={item.unit} disabled={disabled} onChange={v => onChange(`${pathPrefix}.unit`, v)} /></td>
-      <td><input type="number" step="0.1" value={item.tax || 0} disabled={disabled} onChange={e => onChange(`${pathPrefix}.tax`, Number(e.target.value) || 0)} /></td>
-      <td><CurrencySelect value={item.currency} onChange={v => onChange(`${pathPrefix}.currency`, v)} /></td>
-      <td><input type="text" placeholder="Ghi chú..." value={item.note || ''} disabled={disabled} onChange={e => onChange(`${pathPrefix}.note`, e.target.value)} /></td>
+      <td data-label="Đơn vị"><UnitSelect mode={mode} value={item.unit} disabled={disabled} onChange={v => onChange(`${pathPrefix}.unit`, v)} /></td>
+      <td data-label="VAT%"><input type="number" step="0.1" value={item.tax || 0} disabled={disabled} onChange={e => onChange(`${pathPrefix}.tax`, Number(e.target.value) || 0)} /></td>
+      <td data-label="Tiền"><CurrencySelect value={item.currency} onChange={v => onChange(`${pathPrefix}.currency`, v)} /></td>
+      <td data-label="Ghi chú"><input type="text" placeholder="Ghi chú..." value={item.note || ''} disabled={disabled} onChange={e => onChange(`${pathPrefix}.note`, e.target.value)} /></td>
     </tr>
   );
 }
@@ -154,14 +154,14 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
   return (
     <tr className="custom-item-row">
       <td className="item-name"><input type="text" placeholder="Tên hạng mục..." value={item.label || ''} onChange={e => onChange(`${p}.label`, e.target.value)} /></td>
-      <td><MoneyInput value={item.price || 0} onChange={v => onChange(`${p}.price`, v)} /></td>
-      <td><UnitSelect mode={mode} value={item.unit} onChange={v => onChange(`${p}.unit`, v)} /></td>
-      <td><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
-      <td style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      <td data-label="Giá"><MoneyInput value={item.price || 0} onChange={v => onChange(`${p}.price`, v)} /></td>
+      <td data-label="Đơn vị"><UnitSelect mode={mode} value={item.unit} onChange={v => onChange(`${p}.unit`, v)} /></td>
+      <td data-label="VAT%"><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
+      <td data-label="Tiền" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         <CurrencySelect value={item.currency} onChange={v => onChange(`${p}.currency`, v)} />
         <button type="button" title="Xóa hạng mục" onClick={onRemove}>✕</button>
       </td>
-      <td><input type="text" placeholder="Ghi chú..." value={item.note || ''} onChange={e => onChange(`${p}.note`, e.target.value)} /></td>
+      <td data-label="Ghi chú"><input type="text" placeholder="Ghi chú..." value={item.note || ''} onChange={e => onChange(`${p}.note`, e.target.value)} /></td>
     </tr>
   );
 }
@@ -171,14 +171,14 @@ function OverseasItemRow({ side, mode, idx, item, onChange, onRemove }) {
   return (
     <tr className="custom-item-row">
       <td className="item-name"><input type="text" placeholder="Tên khoản phí (VD: Destination THC)..." value={item.label || ''} onChange={e => onChange(`${p}.label`, e.target.value)} /></td>
-      <td><MoneyInput value={item.price || 0} onChange={v => onChange(`${p}.price`, v)} /></td>
-      <td><UnitSelect mode={mode} value={item.unit} onChange={v => onChange(`${p}.unit`, v)} /></td>
-      <td><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
-      <td style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      <td data-label="Giá"><MoneyInput value={item.price || 0} onChange={v => onChange(`${p}.price`, v)} /></td>
+      <td data-label="Đơn vị"><UnitSelect mode={mode} value={item.unit} onChange={v => onChange(`${p}.unit`, v)} /></td>
+      <td data-label="VAT%"><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
+      <td data-label="Tiền" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         <CurrencySelect value={item.currency} onChange={v => onChange(`${p}.currency`, v)} />
         <button type="button" title="Xóa khoản phí" onClick={onRemove}>✕</button>
       </td>
-      <td><input type="text" placeholder="Ghi chú..." value={item.note || ''} onChange={e => onChange(`${p}.note`, e.target.value)} /></td>
+      <td data-label="Ghi chú"><input type="text" placeholder="Ghi chú..." value={item.note || ''} onChange={e => onChange(`${p}.note`, e.target.value)} /></td>
     </tr>
   );
 }
@@ -262,9 +262,9 @@ function InternalDataPanel({ t }) {
                 {rows.map(([key, sug]) => (
                   <tr key={key}>
                     <td className="item-name">{labelFor(key)}</td>
-                    <td>{sug.price === null ? '—' : fmt(sug.price)}</td>
-                    <td>{sug.unit}</td>
-                    <td className="helptext" style={{ margin: 0 }}>{sug.note || ''}</td>
+                    <td data-label="Giá đề xuất (USD)">{sug.price === null ? '—' : fmt(sug.price)}</td>
+                    <td data-label="Đơn vị tính">{sug.unit}</td>
+                    <td className="helptext" data-label="Ghi chú" style={{ margin: 0 }}>{sug.note || ''}</td>
                   </tr>
                 ))}
               </tbody>

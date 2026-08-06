@@ -30,12 +30,12 @@ function Row({ label, item, qty }) {
   return (
     <tr>
       <td className="item-name">{label}</td>
-      <td>{fmt(item.price || 0)}</td>
-      <td>{item.unit || ''}</td>
-      <td>{fmt(item.tax || 0)}%</td>
-      <td>{itemCurrency(item)}</td>
-      <td className="v">{fmt(total)}</td>
-      <td>{item.note || ''}</td>
+      <td data-label="Đơn giá">{fmt(item.price || 0)}</td>
+      <td data-label="Đơn vị tính">{item.unit || ''}</td>
+      <td data-label="VAT%">{fmt(item.tax || 0)}%</td>
+      <td data-label="Tiền">{itemCurrency(item)}</td>
+      <td className="v" data-label="Thành tiền">{fmt(total)}</td>
+      <td data-label="Ghi chú">{item.note || ''}</td>
     </tr>
   );
 }
