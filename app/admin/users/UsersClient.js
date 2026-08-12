@@ -131,7 +131,8 @@ export default function UsersClient({ initialUsers, currentUserId }) {
           <br />
           Pricing/Admin → nhận khi Sales gửi báo giá lên kiểm tra.&nbsp;·&nbsp;
           Manager/Admin → nhận khi Pricing xác nhận.&nbsp;·&nbsp;
-          Sales (người tạo) → nhận khi Pricing từ chối hoặc Manager duyệt/từ chối.
+          Sales (người tạo) → nhận khi Pricing từ chối hoặc Manager duyệt/từ chối.&nbsp;·&nbsp;
+          Accounting/Operation → nhận khi Manager duyệt báo giá.
         </div>
 
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
