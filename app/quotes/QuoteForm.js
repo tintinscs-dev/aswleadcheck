@@ -5,7 +5,7 @@ import {
   MODES, MODE_LABELS, UNIT_OPTIONS_BY_MODE, UNIT_OPTIONS,
   calcQuote, blankCustomItem, newQuoteData, fmt, CURRENCIES, DEFAULT_CURRENCY,
   usdVndRateFromFx, DEFAULT_FX_RATES, itemDefsForMode, migrateQuote,
-  priceSuggestionNote, TARIFF_SUGGEST,
+  priceSuggestionNote, TARIFF_SUGGEST, fromUsd,
 } from '../../lib/calc';
 import { useLang } from '../../components/LangContext';
 import SwipeCarousel from '../../components/SwipeCarousel';
@@ -598,9 +598,19 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
   );
 }
 
-export function SummaryInner({ r }) {
+// displayCurrency/fxRates are optional — omit both to get the original
+// USD-only behaviour (used everywhere the summary is fed live numbers still
+// being edited). The quote view page passes them to drive the "quy đổi tất
+// cả về 1 loại tiền tệ" toggle; this never changes the underlying r.* values,
+// only how they're displayed.
+export function SummaryInner({ r, displayCurrency, fxRates }) {
   const { t } = useLang();
-  function row(label, val, unit = 'USD') { return <div className="sum-row"><span>{label}</span><span className="v">{fmt(val)} <span className="unit">{unit}</span></span></div>; }
+  const cur = displayCurrency || DEFAULT_CURRENCY;
+  const conv = v => (cur === DEFAULT_CURRENCY ? v : fromUsd(v, cur, fxRates));
+  function row(label, val, unit) {
+    const isPercent = unit === '%';
+    return <div className="sum-row"><span>{label}</span><span className="v">{fmt(isPercent ? val : conv(val))} <span className="unit">{isPercent ? '%' : cur}</span></span></div>;
+  }
   return (
     <>
       <div className="sum-section-title">{t('sum.cost')}</div>
@@ -619,8 +629,8 @@ export function SummaryInner({ r }) {
       {row(t('sum.cuocCont'), r.interestCuocCont)}
       {row(t('sum.chiHo'), r.interestChiHoKhac)}
       {row(t('sum.cpKhac'), r.CPKhac)}
-      <div className="sum-row total"><span>{t('sum.cplh')}</span><span className="v">{fmt(r.CPLH)} <span className="unit">USD</span></span></div>
-      <div className="sum-row total"><span>{t('sum.kqkd')}</span><span className={`v ${r.KQKD >= 0 ? 'pos' : 'neg'}`}>{fmt(r.KQKD)} <span className="unit">USD</span></span></div>
+      <div className="sum-row total"><span>{t('sum.cplh')}</span><span className="v">{fmt(conv(r.CPLH))} <span className="unit">{cur}</span></span></div>
+      <div className="sum-row total"><span>{t('sum.kqkd')}</span><span className={`v ${r.KQKD >= 0 ? 'pos' : 'neg'}`}>{fmt(conv(r.KQKD))} <span className="unit">{cur}</span></span></div>
       {row(t('sum.tsln'), r.TSLN * 100, '%')}
       <div className="helptext" style={{ marginTop: -8, marginBottom: 6 }}>{t('sum.tslnNote')}</div>
     </>

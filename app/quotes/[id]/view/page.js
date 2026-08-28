@@ -3,9 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/db';
 import Topbar from '../../../../components/Topbar';
-import { calcQuote, statusLabel, expiryDateLabel, migrateQuote } from '../../../../lib/calc';
-import { SummaryInner } from '../../QuoteForm';
-import ReadOnlyItems from './ReadOnlyItems';
+import { statusLabel, expiryDateLabel, migrateQuote } from '../../../../lib/calc';
+import QuoteViewBody from './QuoteViewBody';
+import ExportActions from './ExportActions';
 import ApproveBox from './ApproveBox';
 import PricingBox from './PricingBox';
 import AdjustmentApproveBox from './AdjustmentApproveBox';
@@ -37,7 +37,6 @@ export default async function QuoteViewPage({ params }) {
   if (!canViewAll && quote.createdById !== user.id) redirect('/dashboard');
 
   const q = migrateQuote(JSON.parse(JSON.stringify(quote)));
-  const r = calcQuote(q);
 
   const canPricingReview = (await can(user.role, 'pricing_review')) && q.status === 'pricing_review';
   const canApprove       = (await can(user.role, 'approve_quote')) && q.status === 'pending';
@@ -49,6 +48,83 @@ export default async function QuoteViewPage({ params }) {
   const canDelete        = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
 
   const history = Array.isArray(q.history) ? q.history.slice().reverse() : [];
+
+  // Passed into QuoteViewBody (a client component) as pre-rendered slots, so
+  // the currency-toggle state it owns can live above ReadOnlyItems *and* the
+  // desktop summary sidebar without duplicating any of this server logic.
+  const infoCard = (
+    <div className="card">
+      <h3>Thông tin chung</h3>
+      <div className="grid grid-3">
+        <div><b>Term:</b> {q.term || '-'}</div><div><b>ETD:</b> {q.etd || '-'}</div><div><b>ETA:</b> {q.eta || '-'}</div>
+        <div><b>20&apos;:</b> {q.qty20}</div><div><b>40&apos;:</b> {q.qty40}</div><div><b>CBM:</b> {q.lcl}</div>
+        <div><b>G.W (kg):</b> {q.weight}</div><div><b>C.W (kg):</b> {q.cw || 0}</div><div><b>Số kiện:</b> {q.pieces || 0} PKGS</div>
+        <div><b>Agent:</b> {q.agent || '-'}</div>
+        <div><b>Line:</b> {q.lineCoLoader || '-'}</div><div><b>Hết hiệu lực:</b> {expiryDateLabel(q.createdAt, q.validDays)}</div>
+        {q.keys && <div><b>Commodity:</b> {q.keys}</div>}
+        {q.notes && <div style={{ gridColumn: '1 / -1' }}><b>Ghi chú:</b> {q.notes}</div>}
+      </div>
+    </div>
+  );
+
+  const historyCard = (
+    <div className="card">
+      <h3>Lịch sử / Duyệt</h3>
+      {history.length === 0 && <div className="empty-state">Chưa có lịch sử.</div>}
+      {history.map((h, i) => (
+        <div className="history-item" key={i}>
+          <b>{ACTION_LABELS[h.action] || h.action.toUpperCase()}</b>
+          {h.comment ? ` — ${h.comment}` : ''}
+          <div className="meta">{h.by} ({h.role}) · {new Date(h.date).toLocaleString('vi-VN')}</div>
+          {['adjusted', 'adjustment_proposed', 'adjustment_approved'].includes(h.action) && Array.isArray(h.changes) && h.changes.length > 0 && (
+            <ul className="diff-list">
+              {h.changes.map((c, ci) => <li key={ci}>{c}</li>)}
+            </ul>
+          )}
+        </div>
+      ))}
+
+      {canPricingReview && (
+        <>
+          <div className="pagesub" style={{ marginTop: 12, marginBottom: 6 }}>
+            Kiểm tra giá mua bên trên, sau đó xác nhận hoặc yêu cầu Sales chỉnh sửa.
+          </div>
+          <PricingBox quoteId={q.id} />
+        </>
+      )}
+
+      {canApprove && <ApproveBox quoteId={q.id} />}
+
+      {hasPendingAdjustment && (
+        <div className="history-item" style={{ borderLeftColor: 'var(--warn, #c98a1f)' }}>
+          <b>ĐỀ XUẤT ĐIỀU CHỈNH ĐANG CHỜ DUYỆT</b>
+          {q.pendingAdjustment.comment ? ` — ${q.pendingAdjustment.comment}` : ''}
+          <div className="meta">
+            {q.pendingAdjustment.proposedBy} ({q.pendingAdjustment.proposedByRole}) · {new Date(q.pendingAdjustment.date).toLocaleString('vi-VN')}
+          </div>
+          {Array.isArray(q.pendingAdjustment.changes) && q.pendingAdjustment.changes.length > 0 && (
+            <ul className="diff-list">
+              {q.pendingAdjustment.changes.map((c, ci) => <li key={ci}>{c}</li>)}
+            </ul>
+          )}
+          {canApproveAdjustment && (
+            <>
+              <div className="pagesub" style={{ marginTop: 12, marginBottom: 6 }}>
+                Xem lại các thay đổi bên trên, sau đó duyệt hoặc từ chối đề xuất điều chỉnh.
+              </div>
+              <AdjustmentApproveBox quoteId={q.id} />
+            </>
+          )}
+        </div>
+      )}
+
+      {canAdjustFees && (
+        <div className="actions-row">
+          <a className="btn btn-outline" href={`/quotes/${q.id}`}>Điều chỉnh phí (giá mua / giá bán)</a>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div>
@@ -64,85 +140,7 @@ export default async function QuoteViewPage({ params }) {
           Sales: <span className="sales-name">{q.sales || '-'}</span>
         </div>
         <div className="layout-form">
-          <div>
-            <div className="card">
-              <h3>Thông tin chung</h3>
-              <div className="grid grid-3">
-                <div><b>Term:</b> {q.term || '-'}</div><div><b>ETD:</b> {q.etd || '-'}</div><div><b>ETA:</b> {q.eta || '-'}</div>
-                <div><b>20&apos;:</b> {q.qty20}</div><div><b>40&apos;:</b> {q.qty40}</div><div><b>CBM:</b> {q.lcl}</div>
-                <div><b>G.W (kg):</b> {q.weight}</div><div><b>C.W (kg):</b> {q.cw || 0}</div><div><b>Số kiện:</b> {q.pieces || 0} PKGS</div>
-                <div><b>Agent:</b> {q.agent || '-'}</div>
-                <div><b>Line:</b> {q.lineCoLoader || '-'}</div><div><b>Hết hiệu lực:</b> {expiryDateLabel(q.createdAt, q.validDays)}</div>
-                {q.keys && <div><b>Commodity:</b> {q.keys}</div>}
-                {q.notes && <div style={{ gridColumn: '1 / -1' }}><b>Ghi chú:</b> {q.notes}</div>}
-              </div>
-            </div>
-            <h3 style={{ margin: '18px 0 8px' }}>Chi tiết các hạng mục đã nhập</h3>
-            <div className="pagesub" style={{ marginTop: -4 }}>Hiển thị đầy đủ cho người xem / người duyệt và các bộ phận liên quan.</div>
-            <ReadOnlyItems q={q} />
-            <div className="card">
-              <h3>Lịch sử / Duyệt</h3>
-              {history.length === 0 && <div className="empty-state">Chưa có lịch sử.</div>}
-              {history.map((h, i) => (
-                <div className="history-item" key={i}>
-                  <b>{ACTION_LABELS[h.action] || h.action.toUpperCase()}</b>
-                  {h.comment ? ` — ${h.comment}` : ''}
-                  <div className="meta">{h.by} ({h.role}) · {new Date(h.date).toLocaleString('vi-VN')}</div>
-                  {['adjusted', 'adjustment_proposed', 'adjustment_approved'].includes(h.action) && Array.isArray(h.changes) && h.changes.length > 0 && (
-                    <ul className="diff-list">
-                      {h.changes.map((c, ci) => <li key={ci}>{c}</li>)}
-                    </ul>
-                  )}
-                </div>
-              ))}
-
-              {canPricingReview && (
-                <>
-                  <div className="pagesub" style={{ marginTop: 12, marginBottom: 6 }}>
-                    Kiểm tra giá mua bên trên, sau đó xác nhận hoặc yêu cầu Sales chỉnh sửa.
-                  </div>
-                  <PricingBox quoteId={q.id} />
-                </>
-              )}
-
-              {canApprove && <ApproveBox quoteId={q.id} />}
-
-              {hasPendingAdjustment && (
-                <div className="history-item" style={{ borderLeftColor: 'var(--warn, #c98a1f)' }}>
-                  <b>ĐỀ XUẤT ĐIỀU CHỈNH ĐANG CHỜ DUYỆT</b>
-                  {q.pendingAdjustment.comment ? ` — ${q.pendingAdjustment.comment}` : ''}
-                  <div className="meta">
-                    {q.pendingAdjustment.proposedBy} ({q.pendingAdjustment.proposedByRole}) · {new Date(q.pendingAdjustment.date).toLocaleString('vi-VN')}
-                  </div>
-                  {Array.isArray(q.pendingAdjustment.changes) && q.pendingAdjustment.changes.length > 0 && (
-                    <ul className="diff-list">
-                      {q.pendingAdjustment.changes.map((c, ci) => <li key={ci}>{c}</li>)}
-                    </ul>
-                  )}
-                  {canApproveAdjustment && (
-                    <>
-                      <div className="pagesub" style={{ marginTop: 12, marginBottom: 6 }}>
-                        Xem lại các thay đổi bên trên, sau đó duyệt hoặc từ chối đề xuất điều chỉnh.
-                      </div>
-                      <AdjustmentApproveBox quoteId={q.id} />
-                    </>
-                  )}
-                </div>
-              )}
-
-              {canAdjustFees && (
-                <div className="actions-row">
-                  <a className="btn btn-outline" href={`/quotes/${q.id}`}>Điều chỉnh phí (giá mua / giá bán)</a>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="summary-panel desktop-only">
-            <div className="card">
-              <h3>Kết quả tính toán</h3>
-              <SummaryInner r={r} />
-            </div>
-          </div>
+          <QuoteViewBody q={q} before={infoCard} after={historyCard} />
         </div>
         <div className="actions-row">
           <a className="btn btn-outline" href="/dashboard">Quay lại Dashboard</a>
@@ -152,12 +150,7 @@ export default async function QuoteViewPage({ params }) {
         <div className="actions-row">
           <a className="btn btn-primary" href={`/api/quotes/${q.id}/pdf`}>Xuất PDF Costing/Selling</a>
         </div>
-        <div className="actions-row">
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf`}>In báo giá VI (PDF)</a>
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-pdf?lang=en`}>In báo giá EN (PDF)</a>
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel`}>In báo giá VI (Excel)</a>
-          <a className="btn btn-ok" href={`/api/quotes/${q.id}/print-excel?lang=en`}>In báo giá EN (Excel)</a>
-        </div>
+        <ExportActions quoteId={q.id} />
       </div>
     </div>
   );

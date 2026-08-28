@@ -3,6 +3,7 @@ import { requireUser } from '../../../../../lib/serverAuth';
 import { quoteToFormalTemplate } from '../../../../../lib/quotePrint';
 import { buildTemplatePdf } from '../../../../../lib/templatePdf';
 import { can } from '../../../../../lib/permissions';
+import { CURRENCIES } from '../../../../../lib/calc';
 
 // Formal, customer-facing "In báo giá" PDF — built from the real saved
 // Quote's selling data (not the manual "Quote theo mẫu" tool).
@@ -17,7 +18,11 @@ export async function GET(req, { params }) {
 
   const { searchParams } = new URL(req.url);
   const lang = searchParams.get('lang') === 'en' ? 'en' : 'vi';
-  const t = quoteToFormalTemplate(quote);
+  // ?ccy=VND (or any FX_CURRENCIES/CURRENCIES value) quy đổi tất cả các dòng
+  // về 1 loại tiền tệ cho bản in — bỏ qua nếu không hợp lệ, giữ nguyên như cũ.
+  const ccyParam = searchParams.get('ccy');
+  const displayCurrency = CURRENCIES.includes(ccyParam) ? ccyParam : null;
+  const t = quoteToFormalTemplate(quote, { displayCurrency });
   const buffer = await buildTemplatePdf(t, { formal: true, salesName: quote.sales || user.name, lang });
 
   return new Response(buffer, {
