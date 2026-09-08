@@ -108,7 +108,14 @@ tbody tr:hover{background:#f7faff;}
 .tabs button{background:none;border:none;padding:9px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;}
 .tabs button.active{color:var(--accent);border-bottom-color:var(--accent);}
 
-.item-table{width:100%;max-width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
+/* Wraps every item-table so that whenever it's too wide for its column (an
+   iPad-width screen showing Costing/Billing side-by-side, a split-screen
+   view, etc.) you get a horizontal scrollbar instead of squeezed/overlapping
+   cells. Below 768px the table itself switches to a stacked card layout (see
+   the media query below) and doesn't need to scroll, so min-width is reset
+   there. */
+.item-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.item-table{width:100%;max-width:100%;min-width:640px;border-collapse:collapse;font-size:12.5px;table-layout:fixed;}
 .item-table th{background:#f4f7fb;padding:8px 8px;text-align:left;font-weight:700;color:var(--navy2);border-bottom:1px solid var(--border);overflow-wrap:break-word;word-break:break-word;}
 .item-table td{padding:6px 7px;border-bottom:1px solid #f0f2f6;vertical-align:top;overflow-wrap:break-word;word-break:break-word;white-space:normal;}
 .item-table input,.item-table select{width:100%;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:12.5px;}
@@ -120,6 +127,7 @@ tbody tr:hover{background:#f7faff;}
    header text overlaps. Below 768px, turn each row into a labelled card
    instead: label:value pairs stacked, using each td's data-label. */
 @media(max-width:768px){
+  .item-table{min-width:0;}
   .item-table thead{display:none;}
   .item-table, .item-table tbody, .item-table tr{display:block;width:100%;}
   .item-table tr{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px 4px;margin-bottom:10px;}

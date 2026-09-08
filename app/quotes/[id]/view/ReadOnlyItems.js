@@ -70,12 +70,14 @@ function CostTable({ side, mode, q, displayCurrency, fxRates }) {
     return <div className="custom-item-note">Không có chi phí nào được nhập.</div>;
   }
   return (
+    <div className="item-table-wrap">
     <table className="item-table">
       <thead><tr><th style={{ width: '24%' }}>Hạng mục</th><th>Đơn giá</th><th>Đơn vị tính</th><th>VAT%</th><th>Tiền</th><th>Thành tiền</th><th style={{ width: '16%' }}>Ghi chú</th></tr></thead>
       <tbody>
         {rows.map(r => <Row key={r.key} label={r.label} item={r.item} qty={qty} displayCurrency={displayCurrency} fxRates={fxRates} />)}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -91,12 +93,14 @@ function OverseasTable({ side, mode, q, displayCurrency, fxRates }) {
     return <div className="custom-item-note">Không có chi phí nào được nhập.</div>;
   }
   return (
+    <div className="item-table-wrap">
     <table className="item-table">
       <thead><tr><th style={{ width: '24%' }}>Hạng mục</th><th>Đơn giá</th><th>Đơn vị tính</th><th>VAT%</th><th>Tiền</th><th>Thành tiền</th><th style={{ width: '16%' }}>Ghi chú</th></tr></thead>
       <tbody>
         {rows.map(r => <Row key={r.key} label={r.label} item={r.item} qty={qty} displayCurrency={displayCurrency} fxRates={fxRates} />)}
       </tbody>
     </table>
+    </div>
   );
 }
 

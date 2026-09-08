@@ -76,6 +76,39 @@ function MoneyInput({ value, onChange, disabled }) {
   );
 }
 
+// Plain decimal number, no thousand separators — for C.W / G.W / CBM / VAT% /
+// lãi suất and any other plain quantity that must accept a decimal point.
+// A native <input type="number"> bound straight to a numeric value re-renders
+// on every keystroke as Number(text), which silently drops a trailing "."
+// the instant it's typed (e.g. typing "12." becomes "12" before you can add
+// the fractional digits) — making decimal entry feel impossible. Same
+// focus/blur raw-string technique as MoneyInput avoids that.
+function formatDecimal(v) {
+  const n = Number(v) || 0;
+  return n === 0 ? '' : String(n);
+}
+function parseDecimal(s) {
+  const cleaned = String(s).replace(',', '.').trim();
+  const n = Number(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+function DecimalInput({ value, onChange, disabled, placeholder }) {
+  const [raw, setRaw] = useState(null);
+  const display = raw !== null ? raw : formatDecimal(value);
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      placeholder={placeholder}
+      value={display}
+      disabled={disabled}
+      onFocus={() => setRaw(value || value === 0 ? String(value) : '')}
+      onBlur={() => { onChange(parseDecimal(raw ?? '')); setRaw(null); }}
+      onChange={e => setRaw(e.target.value)}
+    />
+  );
+}
+
 const TERMS = [
   'EXW', 'FCA', 'FAS', 'FOB',
   'CFR', 'CNF', 'CIF',
@@ -142,7 +175,7 @@ function ItemRow({ mode, side, pathPrefix, def, item, onChange, disabled }) {
         <PriceNote note={note} />
       </td>
       <td data-label="Đơn vị"><UnitSelect mode={mode} value={item.unit} disabled={disabled} onChange={v => onChange(`${pathPrefix}.unit`, v)} /></td>
-      <td data-label="VAT%"><input type="number" step="0.1" value={item.tax || 0} disabled={disabled} onChange={e => onChange(`${pathPrefix}.tax`, Number(e.target.value) || 0)} /></td>
+      <td data-label="VAT%"><DecimalInput value={item.tax || 0} disabled={disabled} onChange={v => onChange(`${pathPrefix}.tax`, v)} /></td>
       <td data-label="Tiền"><CurrencySelect value={item.currency} onChange={v => onChange(`${pathPrefix}.currency`, v)} /></td>
       <td data-label="Ghi chú"><input type="text" placeholder="Ghi chú..." value={item.note || ''} disabled={disabled} onChange={e => onChange(`${pathPrefix}.note`, e.target.value)} /></td>
     </tr>
@@ -156,7 +189,7 @@ function CustomItemRow({ side, mode, idx, item, onChange, onRemove }) {
       <td className="item-name"><input type="text" placeholder="Tên hạng mục..." value={item.label || ''} onChange={e => onChange(`${p}.label`, e.target.value)} /></td>
       <td data-label="Giá"><MoneyInput value={item.price || 0} onChange={v => onChange(`${p}.price`, v)} /></td>
       <td data-label="Đơn vị"><UnitSelect mode={mode} value={item.unit} onChange={v => onChange(`${p}.unit`, v)} /></td>
-      <td data-label="VAT%"><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
+      <td data-label="VAT%"><DecimalInput value={item.tax || 0} onChange={v => onChange(`${p}.tax`, v)} /></td>
       <td data-label="Tiền" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         <CurrencySelect value={item.currency} onChange={v => onChange(`${p}.currency`, v)} />
         <button type="button" title="Xóa hạng mục" onClick={onRemove}>✕</button>
@@ -173,7 +206,7 @@ function OverseasItemRow({ side, mode, idx, item, onChange, onRemove }) {
       <td className="item-name"><input type="text" placeholder="Tên khoản phí (VD: Destination THC)..." value={item.label || ''} onChange={e => onChange(`${p}.label`, e.target.value)} /></td>
       <td data-label="Giá"><MoneyInput value={item.price || 0} onChange={v => onChange(`${p}.price`, v)} /></td>
       <td data-label="Đơn vị"><UnitSelect mode={mode} value={item.unit} onChange={v => onChange(`${p}.unit`, v)} /></td>
-      <td data-label="VAT%"><input type="number" step="0.1" value={item.tax || 0} onChange={e => onChange(`${p}.tax`, Number(e.target.value) || 0)} /></td>
+      <td data-label="VAT%"><DecimalInput value={item.tax || 0} onChange={v => onChange(`${p}.tax`, v)} /></td>
       <td data-label="Tiền" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         <CurrencySelect value={item.currency} onChange={v => onChange(`${p}.currency`, v)} />
         <button type="button" title="Xóa khoản phí" onClick={onRemove}>✕</button>
@@ -187,6 +220,7 @@ function OverseasItemsTable({ side, mode, q, onChange, onAddOverseas, onRemoveOv
   const data = q[side]?.[mode] || {};
   return (
     <>
+      <div className="item-table-wrap">
       <table className="item-table">
         <thead><tr>
           <th style={{ width: '26%' }}>{t('table.col.item')}</th>
@@ -202,6 +236,7 @@ function OverseasItemsTable({ side, mode, q, onChange, onAddOverseas, onRemoveOv
           ))}
         </tbody>
       </table>
+      </div>
       <button type="button" className="btn-add-item" onClick={() => onAddOverseas(side, mode)}>{t('table.addItem')}</button>
     </>
   );
@@ -212,6 +247,7 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, 
   const defs = itemDefsForMode(mode);
   return (
     <>
+      <div className="item-table-wrap">
       <table className="item-table">
         <thead><tr>
           <th style={{ width: '26%' }}>{t('table.col.item')}</th>
@@ -228,6 +264,7 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, 
           ))}
         </tbody>
       </table>
+      </div>
       <button type="button" className="btn-add-item" onClick={() => onAddCustom(side, mode)}>{t('table.addItem')}</button>
       <div className="custom-item-note">{t('table.customNote')}</div>
     </>
@@ -251,6 +288,7 @@ function InternalDataPanel({ t }) {
         return (
           <div className="card" key={mode}>
             <h4 style={{ marginTop: 0 }}>{INTERNAL_MODE_TITLES[mode]}</h4>
+            <div className="item-table-wrap">
             <table className="item-table">
               <thead><tr>
                 <th style={{ width: '40%' }}>Hạng mục</th>
@@ -269,6 +307,7 @@ function InternalDataPanel({ t }) {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         );
       })}
@@ -441,9 +480,9 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
             <div className="grid grid-4">
               <div className="field"><label>{t('field.qty20')}</label><input type="number" value={q.qty20 || 0} onChange={e => setField('qty20', Number(e.target.value) || 0)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.qty40')}</label><input type="number" value={q.qty40 || 0} onChange={e => setField('qty40', Number(e.target.value) || 0)} disabled={readonly} /></div>
-              <div className="field"><label>{t('field.lcl')}</label><input type="number" step="0.01" value={q.lcl || 0} onChange={e => setField('lcl', Number(e.target.value) || 0)} disabled={readonly} /></div>
-              <div className="field"><label>{t('field.weight')}</label><input type="number" step="0.01" value={q.weight || 0} onChange={e => setField('weight', Number(e.target.value) || 0)} disabled={readonly} /></div>
-              <div className="field"><label>{t('field.cw')}</label><input type="number" step="0.01" value={q.cw || 0} onChange={e => setField('cw', Number(e.target.value) || 0)} disabled={readonly} /></div>
+              <div className="field"><label>{t('field.lcl')}</label><DecimalInput value={q.lcl || 0} onChange={v => setField('lcl', v)} disabled={readonly} /></div>
+              <div className="field"><label>{t('field.weight')}</label><DecimalInput value={q.weight || 0} onChange={v => setField('weight', v)} disabled={readonly} /></div>
+              <div className="field"><label>{t('field.cw')}</label><DecimalInput value={q.cw || 0} onChange={v => setField('cw', v)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.pieces')}</label><input type="number" step="1" value={q.pieces || 0} onChange={e => setField('pieces', Number(e.target.value) || 0)} disabled={readonly} /></div>
               <div className="field" style={{ gridColumn: '1 / -1' }}>
                 <label>{t('field.notes')}</label>
@@ -543,7 +582,7 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
                   <label>{t('field.fxRate')}</label>
                   <input type="text" value={fmt(liveExchangeRate)} disabled readOnly title={t('field.fxRate.help')} />
                 </div>
-                <div className="field"><label>{t('field.interestRate')}</label><input type="number" step="0.1" value={q.interestRatePct || 0} onChange={e => setField('interestRatePct', Number(e.target.value) || 0)} /></div>
+                <div className="field"><label>{t('field.interestRate')}</label><DecimalInput value={q.interestRatePct || 0} onChange={v => setField('interestRatePct', v)} /></div>
               </div>
               <div className="grid grid-3">
                 <div className="field"><label>{t('field.creditDays0')}</label><input type="number" value={q.creditDays0 || 0} onChange={e => setField('creditDays0', Number(e.target.value) || 0)} /></div>

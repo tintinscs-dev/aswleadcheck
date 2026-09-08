@@ -118,26 +118,28 @@ export default function TemplateClient() {
       {TEMPLATE_SECTIONS.map(sec => (
         <div className="card" key={sec.key}>
           <h3>{sec.title}</h3>
+          <div className="item-table-wrap">
           <table className="item-table">
             <thead><tr><th style={{ width: 30 }}>No.</th><th>Charge Description</th><th>Unit Rate</th><th>Currency</th><th>Unit</th><th>Notes</th><th></th></tr></thead>
             <tbody>
               {t[sec.key].map((r, idx) => (
                 <tr key={idx}>
-                  <td>{idx + 1}</td>
-                  <td><input value={r.desc} onChange={e => setRow(sec.key, idx, 'desc', e.target.value)} /></td>
-                  <td><input value={r.rate} onChange={e => setRow(sec.key, idx, 'rate', e.target.value)} placeholder="vd: 230.00" /></td>
-                  <td>
+                  <td data-label="No." className="item-name">{idx + 1}</td>
+                  <td data-label="Charge Description"><input value={r.desc} onChange={e => setRow(sec.key, idx, 'desc', e.target.value)} /></td>
+                  <td data-label="Unit Rate"><input value={r.rate} onChange={e => setRow(sec.key, idx, 'rate', e.target.value)} placeholder="vd: 230.00" /></td>
+                  <td data-label="Currency">
                     <select value={r.currency} onChange={e => setRow(sec.key, idx, 'currency', e.target.value)}>
                       <option value="USD">USD</option><option value="VND">VND</option><option value="EUR">EUR</option>
                     </select>
                   </td>
-                  <td><input value={r.unit} onChange={e => setRow(sec.key, idx, 'unit', e.target.value)} placeholder="vd: 40HC, Bill of Lading" /></td>
-                  <td><input value={r.notes} onChange={e => setRow(sec.key, idx, 'notes', e.target.value)} /></td>
+                  <td data-label="Unit"><input value={r.unit} onChange={e => setRow(sec.key, idx, 'unit', e.target.value)} placeholder="vd: 40HC, Bill of Lading" /></td>
+                  <td data-label="Notes"><input value={r.notes} onChange={e => setRow(sec.key, idx, 'notes', e.target.value)} /></td>
                   <td><button type="button" title="Xóa dòng" onClick={() => removeRow(sec.key, idx)}>✕</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
           <button type="button" className="btn-add-item" onClick={() => addRow(sec.key)}>+ Thêm dòng</button>
         </div>
       ))}
