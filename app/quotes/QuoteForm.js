@@ -45,6 +45,41 @@ function expiryToValidDays(dateStr, createdAt) {
   return Math.max(1, Math.round((selected - base) / 86400000));
 }
 
+// Parses a number typed with either "." or "," as the decimal point.
+// iPhones set to Vietnam's region show a numeric keypad whose decimal key is
+// "," (not "."), so a comma must be accepted as a real decimal separator —
+// but the app's own formatted display (and desktop typing habits) also use
+// "," to group thousands (e.g. "6,500,000"), which must still parse as a
+// whole number. Disambiguate the same way spreadsheets do: a lone comma
+// followed by exactly 3 digits (and nothing else after it) is a thousands
+// group ("1,200" → 1200); anything else — a lone comma with 1-2 or 4+
+// trailing digits ("12,5" → 12.5), or multiple commas ("6,500,000") — is
+// handled accordingly. When both "." and "," appear, whichever comes last
+// is the real decimal point and the other is thousands-grouping.
+function parseFlexibleNumber(s) {
+  let str = String(s ?? '').trim();
+  if (!str) return 0;
+  const lastComma = str.lastIndexOf(',');
+  const lastDot = str.lastIndexOf('.');
+  if (lastComma > -1 && lastDot > -1) {
+    str = lastComma > lastDot
+      ? str.replace(/\./g, '').replace(',', '.')
+      : str.replace(/,/g, '');
+  } else if (lastComma > -1) {
+    const parts = str.split(',');
+    if (parts.length > 2) {
+      // multiple commas — always thousands grouping, e.g. "6,500,000"
+      str = str.replace(/,/g, '');
+    } else {
+      // exactly one comma — thousands group only if followed by exactly 3
+      // digits ("1,200" → 1200); otherwise it's the decimal point ("12,5" → 12.5)
+      str = parts[1].length === 3 ? str.replace(',', '') : str.replace(',', '.');
+    }
+  }
+  const n = Number(str);
+  return isNaN(n) ? 0 : n;
+}
+
 // Plain number while focused (easy to type), comma-separated thousands once
 // you click away — used for every money field (giá cả/chi phí) for readability.
 function formatMoney(v) {
@@ -52,9 +87,7 @@ function formatMoney(v) {
   return n === 0 ? '' : n.toLocaleString('en-US', { maximumFractionDigits: 4 });
 }
 function parseMoney(s) {
-  const cleaned = String(s).replace(/,/g, '').trim();
-  const n = Number(cleaned);
-  return isNaN(n) ? 0 : n;
+  return parseFlexibleNumber(s);
 }
 function MoneyInput({ value, onChange, disabled }) {
   // raw = null means "not focused" — display formatted value.
@@ -76,21 +109,22 @@ function MoneyInput({ value, onChange, disabled }) {
   );
 }
 
-// Plain decimal number, no thousand separators — for C.W / G.W / CBM / VAT% /
-// lãi suất and any other plain quantity that must accept a decimal point.
-// A native <input type="number"> bound straight to a numeric value re-renders
-// on every keystroke as Number(text), which silently drops a trailing "."
-// the instant it's typed (e.g. typing "12." becomes "12" before you can add
-// the fractional digits) — making decimal entry feel impossible. Same
-// focus/blur raw-string technique as MoneyInput avoids that.
+// Plain decimal number, no thousand separators shown on screen — for
+// C.W / G.W / CBM / VAT% / lãi suất and any other plain quantity that must
+// accept a decimal point. A native <input type="number"> bound straight to a
+// numeric value re-renders on every keystroke as Number(text), which
+// silently drops a trailing "." the instant it's typed (e.g. typing "12."
+// becomes "12" before you can add the fractional digits) — making decimal
+// entry feel impossible. Same focus/blur raw-string technique as MoneyInput
+// avoids that, and parseFlexibleNumber handles a comma typed as either a
+// decimal point (VN-locale phone keypads) or thousands grouping (e.g. G.W
+// entered as "1,200" kg).
 function formatDecimal(v) {
   const n = Number(v) || 0;
   return n === 0 ? '' : String(n);
 }
 function parseDecimal(s) {
-  const cleaned = String(s).replace(',', '.').trim();
-  const n = Number(cleaned);
-  return isNaN(n) ? 0 : n;
+  return parseFlexibleNumber(s);
 }
 function DecimalInput({ value, onChange, disabled, placeholder }) {
   const [raw, setRaw] = useState(null);
