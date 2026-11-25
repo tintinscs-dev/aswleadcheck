@@ -13,7 +13,7 @@ export default function CommissionClient({ rows }) {
 
   const filtered = useMemo(() => filterCommissionRows(rows, filters), [rows, filters]);
   const summary = useMemo(() => summarizeByMonth(filtered), [filtered]);
-  const { showBuy, showSell, showTotal } = visibleSides(filtered);
+  const { showBuy, showSell, showTotal, showNote } = visibleSides(filtered);
 
   const totBuy = filtered.reduce((a, r) => a + r.buy, 0);
   const totSell = filtered.reduce((a, r) => a + r.sell, 0);
@@ -98,10 +98,11 @@ export default function CommissionClient({ rows }) {
             {showBuy && <th style={{ textAlign: 'right' }}>CKTM mua</th>}
             {showSell && <th style={{ textAlign: 'right' }}>CKTM bán</th>}
             {showTotal && <th style={{ textAlign: 'right' }}>Tổng</th>}
+            {showNote && <th>Người nhận com / Ghi chú</th>}
             <th></th>
           </tr></thead>
           <tbody>
-            {filtered.length === 0 && <tr><td colSpan={11} className="empty-state">Không có dữ liệu.</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={12} className="empty-state">Không có dữ liệu.</td></tr>}
             {filtered.map(r => (
               <tr key={r.id}>
                 <td>{r.no || '-'}</td>
@@ -114,6 +115,7 @@ export default function CommissionClient({ rows }) {
                 {showBuy && <td style={{ textAlign: 'right' }}>{cell(r.buy)}</td>}
                 {showSell && <td style={{ textAlign: 'right' }}>{cell(r.sell)}</td>}
                 {showTotal && <td style={{ textAlign: 'right', fontWeight: 700 }}>{cell(r.total)}</td>}
+                {showNote && <td>{r.note || '-'}</td>}
                 <td><Link href={`/quotes/${r.id}/view`}><button className="btn btn-outline btn-sm">Xem</button></Link></td>
               </tr>
             ))}
