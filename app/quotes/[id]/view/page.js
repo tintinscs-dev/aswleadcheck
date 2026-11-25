@@ -46,6 +46,8 @@ export default async function QuoteViewPage({ params }) {
     && (user.role !== 'sales' || q.createdById === user.id) && (!hasPendingAdjustment || user.role === 'admin');
   const canApproveAdjustment = hasPendingAdjustment && (await can(user.role, 'approve_adjustment'));
   const canDelete        = q.status === 'draft' && (user.role === 'admin' || q.createdById === user.id);
+  // Same rule as the Dashboard "Sửa" button: draft/rejected → owner or admin.
+  const canEditDraft     = (q.status === 'draft' || q.status === 'rejected') && (user.role === 'admin' || q.createdById === user.id);
 
   const history = Array.isArray(q.history) ? q.history.slice().reverse() : [];
 
@@ -134,6 +136,12 @@ export default async function QuoteViewPage({ params }) {
           Báo giá {q.no || q.id} <span className={`badge badge-${q.status}`}>{statusLabel(q.status)}</span>
           {hasPendingAdjustment && <span className="badge badge-pricing_review" style={{ marginLeft: 6 }}>⏳ Chờ duyệt điều chỉnh</span>}
         </h2>
+        <div className="actions-row" style={{ marginTop: 0, marginBottom: 10 }}>
+          {canEditDraft && <a className="btn btn-primary" href={`/quotes/${q.id}`}>✏ Sửa báo giá</a>}
+          {canAdjustFees && <a className="btn btn-primary" href={`/quotes/${q.id}`}>✏ Điều chỉnh phí</a>}
+          <a className="btn btn-outline" href="/quotes/new">＋ Tạo báo giá mới</a>
+          <CopyButton quoteId={q.id} />
+        </div>
         <div className="pagesub">
           {(q.shpr || q.cnee) && <>{[q.shpr, q.cnee].filter(Boolean).join(' → ')}{'  |  '}</>}
           {(q.pol || q.pod) && <>{[q.pol, q.pod].filter(Boolean).join(' → ')}{'  |  '}</>}

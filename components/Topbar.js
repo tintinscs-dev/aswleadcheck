@@ -37,6 +37,7 @@ export default function Topbar({ user }) {
         <Link href="/dashboard"><button className={isActive('/dashboard')}>{t('nav.dashboard')}</button></Link>
         <Link href="/quotes/new"><button className={isActive('/quotes/new')}>{t('nav.newQuote')}</button></Link>
         <Link href="/fx-rates"><button className={isActive('/fx-rates')}>{t('nav.fxRates')}</button></Link>
+        <Link href="/reports/commission"><button className={isActive('/reports/commission')}>{t('nav.commission')}</button></Link>
         {showApprovals && (
           <Link href="/approvals"><button className={isActive('/approvals')}>{t('nav.approvals')}</button></Link>
         )}
