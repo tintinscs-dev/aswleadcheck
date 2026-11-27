@@ -12,7 +12,7 @@ import { useRef, useState } from 'react';
 // panels: [{ key, label, content, mobileOnly? }]
 // mobileOnly panels (e.g. a duplicated "live result" summary) are hidden on
 // desktop via CSS so they don't show twice next to an existing sidebar.
-export default function SwipeCarousel({ panels }) {
+export default function SwipeCarousel({ panels, className = '' }) {
   const trackRef = useRef(null);
   const [active, setActive] = useState(0);
 
@@ -31,7 +31,7 @@ export default function SwipeCarousel({ panels }) {
   }
 
   return (
-    <div className="swipe-carousel">
+    <div className={`swipe-carousel${className ? ` ${className}` : ''}`}>
       <div className="swipe-tabs">
         {panels.map((p, i) => (
           <button

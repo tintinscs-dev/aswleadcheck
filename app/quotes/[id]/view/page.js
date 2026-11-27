@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/db';
 import Topbar from '../../../../components/Topbar';
-import { statusLabel, expiryDateLabel, migrateQuote } from '../../../../lib/calc';
+import { statusLabel, expiryDateLabel, migrateQuote, equipmentLabel } from '../../../../lib/calc';
 import QuoteViewBody from './QuoteViewBody';
 import ExportActions from './ExportActions';
 import ApproveBox from './ApproveBox';
@@ -59,7 +59,7 @@ export default async function QuoteViewPage({ params }) {
       <h3>Thông tin chung</h3>
       <div className="grid grid-3">
         <div><b>Term:</b> {q.term || '-'}</div><div><b>ETD:</b> {q.etd || '-'}</div><div><b>ETA:</b> {q.eta || '-'}</div>
-        <div><b>20&apos;:</b> {q.qty20}</div><div><b>40&apos;:</b> {q.qty40}</div><div><b>CBM:</b> {q.lcl}</div>
+        <div><b>Container:</b> {equipmentLabel(q.equipment) || '-'}</div><div><b>CBM:</b> {q.lcl}</div>
         <div><b>G.W (kg):</b> {q.weight}</div><div><b>C.W (kg):</b> {q.cw || 0}</div><div><b>Số kiện:</b> {q.pieces || 0} PKGS</div>
         <div><b>Agent:</b> {q.agent || '-'}</div>
         <div><b>Line:</b> {q.lineCoLoader || '-'}</div><div><b>Hết hiệu lực:</b> {expiryDateLabel(q.createdAt, q.validDays)}</div>

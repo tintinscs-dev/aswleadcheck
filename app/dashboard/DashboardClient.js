@@ -110,12 +110,12 @@ export default function DashboardClient({ quotes, user, canProposeAdjustment = f
     chartInstances.current = {};
     const navy = '#0b2545', navy2 = '#13315c', ok = '#1d7a4f', warn = '#c98a1f', danger = '#c0392b';
 
-    const modeCounts = { fcl20: 0, fcl40: 0, lclair: 0 };
-    filtered.forEach(q => quoteModes(q).forEach(m => modeCounts[m]++));
+    const modeCounts = { fcl: 0, lcl: 0, air: 0 };
+    filtered.forEach(q => quoteModes(q).forEach(m => { if (m in modeCounts) modeCounts[m]++; }));
     if (modeChartRef.current) {
       chartInstances.current.mode = new Chart(modeChartRef.current, {
         type: 'pie',
-        data: { labels: [MODE_LABELS.fcl20, MODE_LABELS.fcl40, MODE_LABELS.lclair], datasets: [{ data: [modeCounts.fcl20, modeCounts.fcl40, modeCounts.lclair], backgroundColor: [navy2, navy, ok] }] },
+        data: { labels: [MODE_LABELS.fcl, MODE_LABELS.lcl, MODE_LABELS.air], datasets: [{ data: [modeCounts.fcl, modeCounts.lcl, modeCounts.air], backgroundColor: [navy2, navy, ok] }] },
         options: { responsive: true, maintainAspectRatio: false },
       });
     }

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/db';
 import { requireUser } from '../../../../lib/serverAuth';
 import { diffQuoteCosts } from '../../../../lib/diff';
-import { DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../../lib/calc';
+import { DEFAULT_FX_RATES, usdVndRateFromFx, toDbQuoteData } from '../../../../lib/calc';
 import { sendTelegram, quoteNotifyText } from '../../../../lib/telegram';
 import { sendEmailNotification } from '../../../../lib/email';
 import { can } from '../../../../lib/permissions';
@@ -124,7 +124,7 @@ export async function PUT(req, { params }) {
 
   const fxRates = await currentFxRates();
   const exchangeRate = usdVndRateFromFx(fxRates);
-  const data = { ...rest, fxRates, exchangeRate, status: targetStatus, history, pendingAdjustment };
+  const data = toDbQuoteData({ ...rest, fxRates, exchangeRate, status: targetStatus, history, pendingAdjustment });
 
   try {
     const quote = await prisma.quote.update({ where: { id: params.id }, data });

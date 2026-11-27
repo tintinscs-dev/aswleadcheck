@@ -1,4 +1,4 @@
-import { MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode, calcQuote, toUsd, fromUsd } from '../../../../lib/calc';
+import { MODE_LABELS, qtyForMode, lineTotal, quoteModes, fmt, itemCurrency, itemDefsForMode, calcQuote, toUsd, fromUsd, modeLines, fclDisplayRows, activeEquipment, isFlatUnit, equipmentLabel, fclSpecsLines } from '../../../../lib/calc';
 import SwipeCarousel from '../../../../components/SwipeCarousel';
 import { SummaryInner } from '../../QuoteForm';
 
@@ -105,9 +105,50 @@ function OverseasTable({ side, mode, q, displayCurrency, fxRates }) {
 }
 
 function hasOverseasData(q, mode) {
-  const b = q.buying?.[mode]?.overseasItems || [];
-  const s = q.selling?.[mode]?.overseasItems || [];
-  return [...b, ...s].some(it => Number(it?.price || 0));
+  return modeLines(q, 'buying', mode, 'overseas').length > 0 || modeLines(q, 'selling', mode, 'overseas').length > 0;
+}
+
+// FCL: one read-only matrix — unit price per container type, "Theo lô" for B/L / Shipment fees.
+function FclTable({ side, kind, q, displayCurrency, fxRates }) {
+  const eq = activeEquipment(q);
+  const rows = fclDisplayRows(q, side, kind);
+  if (!rows.length) return <div className="custom-item-note">Không có chi phí nào được nhập.</div>;
+  const original = isOriginalMode(displayCurrency);
+  return (
+    <div className="item-table-wrap">
+    <table className="item-table fcl-matrix" style={{ '--fcl-min': `${240 + eq.length * 90 + 90 + 100 + 60 + 60 + 100 + 130}px` }}>
+      <thead><tr>
+        <th style={{ width: 240 }}>Hạng mục</th>
+        {eq.map(e => <th key={e.type} style={{ width: 90 }} className="num">{e.type}<div className="th-sub">x {e.qty}</div></th>)}
+        <th style={{ width: 90 }} className="num">Theo lô</th>
+        <th style={{ width: 100 }}>Đơn vị tính</th><th style={{ width: 60 }}>VAT%</th><th style={{ width: 60 }}>Tiền</th>
+        <th style={{ width: 100 }} className="num">Thành tiền</th><th style={{ width: 130 }}>Ghi chú</th>
+      </tr></thead>
+      <tbody>
+        {rows.map((r, i) => {
+          const flat = isFlatUnit(r.row.unit);
+          const ccy = itemCurrency(r.row);
+          const shownTotal = original ? r.total : fromUsd(toUsd(r.total, ccy, fxRates), displayCurrency, fxRates);
+          return (
+            <tr key={i}>
+              <td className="item-name">{r.label}</td>
+              {eq.map(e => {
+                const v = !flat ? Number(r.row.byType?.[e.type] || 0) : 0;
+                return v ? <td key={e.type} className="num" data-label={e.type}>{fmt(v)}</td> : <td key={e.type} className="na-cell" data-label={e.type}><span className="na">–</span></td>;
+              })}
+              {flat ? <td className="num" data-label="Theo lô">{fmt(r.row.price || 0)}</td> : <td className="na-cell" data-label="Theo lô"><span className="na">–</span></td>}
+              <td data-label="Đơn vị tính">{flat ? r.row.unit : 'Container'}</td>
+              <td data-label="VAT%">{fmt(r.row.tax || 0)}%</td>
+              <td data-label="Tiền">{original ? ccy : displayCurrency}</td>
+              <td className="v num" data-label="Thành tiền">{fmt(shownTotal)}</td>
+              <td data-label="Ghi chú">{r.row.note || ''}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+    </div>
+  );
 }
 
 // displayCurrency: undefined/'ORIGINAL' = keep each item's own currency (as
@@ -124,18 +165,19 @@ export default function ReadOnlyItems({ q, displayCurrency }) {
       {modes.map(mode => hasOverseasData(q, mode) && (
         <div className="card" key={`overseas-${mode}`}>
           <h4 style={{ marginTop: 0 }}>I. Overseas Charges (Chi phí đầu nước ngoài) — {MODE_LABELS[mode]}</h4>
-          <SwipeCarousel panels={[
-            { key: 'costing', label: 'Giá mua (Cost)', content: (<><div className="sum-section-title">Giá mua (Cost)</div><OverseasTable side="buying" mode={mode} q={q} displayCurrency={displayCurrency} fxRates={fxRates} /></>) },
-            { key: 'billing', label: 'Giá bán (Sell)', content: (<><div className="sum-section-title">Giá bán (Sell)</div><OverseasTable side="selling" mode={mode} q={q} displayCurrency={displayCurrency} fxRates={fxRates} /></>) },
+          <SwipeCarousel className={mode === 'fcl' ? 'stacked' : ''} panels={[
+            { key: 'costing', label: 'Giá mua (Cost)', content: (<><div className="sum-section-title">Giá mua (Cost)</div>{mode === 'fcl' ? <FclTable side="buying" kind="overseas" q={q} displayCurrency={displayCurrency} fxRates={fxRates} /> : <OverseasTable side="buying" mode={mode} q={q} displayCurrency={displayCurrency} fxRates={fxRates} />}</>) },
+            { key: 'billing', label: 'Giá bán (Sell)', content: (<><div className="sum-section-title">Giá bán (Sell)</div>{mode === 'fcl' ? <FclTable side="selling" kind="overseas" q={q} displayCurrency={displayCurrency} fxRates={fxRates} /> : <OverseasTable side="selling" mode={mode} q={q} displayCurrency={displayCurrency} fxRates={fxRates} />}</>) },
           ]} />
         </div>
       ))}
       {modes.map(mode => (
         <div className="card" key={mode}>
-          <h4 style={{ marginTop: 0 }}>{MODE_LABELS[mode]}</h4>
-          <SwipeCarousel panels={[
-            { key: 'costing', label: 'Giá mua (Cost)', content: (<><div className="sum-section-title">II. Giá mua (Cost)</div><CostTable side="buying" mode={mode} q={q} displayCurrency={displayCurrency} fxRates={fxRates} /></>) },
-            { key: 'billing', label: 'Giá bán (Sell)', content: (<><div className="sum-section-title">III. Giá bán (Sell)</div><CostTable side="selling" mode={mode} q={q} displayCurrency={displayCurrency} fxRates={fxRates} /></>) },
+          <h4 style={{ marginTop: 0 }}>{MODE_LABELS[mode]}{mode === 'fcl' && equipmentLabel(q.equipment) ? ` — ${equipmentLabel(q.equipment)}` : ''}</h4>
+          {mode === 'fcl' && fclSpecsLines(q).map((l, i) => <div key={i} className="helptext" style={{ marginTop: -4 }}>{l}</div>)}
+          <SwipeCarousel className={mode === 'fcl' ? 'stacked' : ''} panels={[
+            { key: 'costing', label: 'Giá mua (Cost)', content: (<><div className="sum-section-title">II. Giá mua (Cost)</div>{mode === 'fcl' ? <FclTable side="buying" kind="charges" q={q} displayCurrency={displayCurrency} fxRates={fxRates} /> : <CostTable side="buying" mode={mode} q={q} displayCurrency={displayCurrency} fxRates={fxRates} />}</>) },
+            { key: 'billing', label: 'Giá bán (Sell)', content: (<><div className="sum-section-title">III. Giá bán (Sell)</div>{mode === 'fcl' ? <FclTable side="selling" kind="charges" q={q} displayCurrency={displayCurrency} fxRates={fxRates} /> : <CostTable side="selling" mode={mode} q={q} displayCurrency={displayCurrency} fxRates={fxRates} />}</>) },
             { key: 'result', label: 'Kết quả tính toán', mobileOnly: true, content: (<><div className="sum-section-title">Kết quả tính toán</div><SummaryInner r={r} displayCurrency={summaryCurrency} fxRates={fxRates} /></>) },
           ]} />
         </div>

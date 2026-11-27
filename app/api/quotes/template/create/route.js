@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
 import { mapTemplateToQuoteData } from '../../../../../lib/templateQuote';
-import { DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../../../lib/calc';
+import { DEFAULT_FX_RATES, usdVndRateFromFx, toDbQuoteData } from '../../../../../lib/calc';
 
 export async function POST(req) {
   const user = await requireUser();
@@ -23,6 +23,6 @@ export async function POST(req) {
   data.status = 'draft';
   data.history = [{ by: user.name, byId: user.id, role: user.role, action: 'created_from_template', comment: 'Tạo từ Quote theo mẫu', date: new Date().toISOString() }];
 
-  const quote = await prisma.quote.create({ data });
+  const quote = await prisma.quote.create({ data: toDbQuoteData(data) });
   return NextResponse.json({ id: quote.id });
 }

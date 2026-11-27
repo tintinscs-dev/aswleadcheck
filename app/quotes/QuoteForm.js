@@ -5,18 +5,12 @@ import {
   MODES, MODE_LABELS, UNIT_OPTIONS_BY_MODE, UNIT_OPTIONS,
   calcQuote, blankCustomItem, newQuoteData, fmt, CURRENCIES, DEFAULT_CURRENCY,
   usdVndRateFromFx, DEFAULT_FX_RATES, itemDefsForMode, migrateQuote,
-  priceSuggestionNote, TARIFF_SUGGEST, fromUsd,
+  priceSuggestionNote, TARIFF_SUGGEST, fromUsd, blankMode, syncLegacyQty, equipmentLabel,
 } from '../../lib/calc';
 import { useLang } from '../../components/LangContext';
 import SwipeCarousel from '../../components/SwipeCarousel';
-
-function CurrencySelect({ value, onChange }) {
-  return (
-    <select className="currency-select" value={value || DEFAULT_CURRENCY} onChange={e => onChange(e.target.value)} title="Đơn vị tiền tệ của dòng này">
-      {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-    </select>
-  );
-}
+import { CurrencySelect, MoneyInput, DecimalInput, PriceNote } from './FormInputs';
+import { EquipmentEditor, FclSpecsEditor, FclMatrixTable } from './FclMatrix';
 
 function unitOptionsFor(mode, current) {
   const base = UNIT_OPTIONS_BY_MODE[mode] || UNIT_OPTIONS;
@@ -45,103 +39,6 @@ function expiryToValidDays(dateStr, createdAt) {
   return Math.max(1, Math.round((selected - base) / 86400000));
 }
 
-// Parses a number typed with either "." or "," as the decimal point.
-// iPhones set to Vietnam's region show a numeric keypad whose decimal key is
-// "," (not "."), so a comma must be accepted as a real decimal separator —
-// but the app's own formatted display (and desktop typing habits) also use
-// "," to group thousands (e.g. "6,500,000"), which must still parse as a
-// whole number. Disambiguate the same way spreadsheets do: a lone comma
-// followed by exactly 3 digits (and nothing else after it) is a thousands
-// group ("1,200" → 1200); anything else — a lone comma with 1-2 or 4+
-// trailing digits ("12,5" → 12.5), or multiple commas ("6,500,000") — is
-// handled accordingly. When both "." and "," appear, whichever comes last
-// is the real decimal point and the other is thousands-grouping.
-function parseFlexibleNumber(s) {
-  let str = String(s ?? '').trim();
-  if (!str) return 0;
-  const lastComma = str.lastIndexOf(',');
-  const lastDot = str.lastIndexOf('.');
-  if (lastComma > -1 && lastDot > -1) {
-    str = lastComma > lastDot
-      ? str.replace(/\./g, '').replace(',', '.')
-      : str.replace(/,/g, '');
-  } else if (lastComma > -1) {
-    const parts = str.split(',');
-    if (parts.length > 2) {
-      // multiple commas — always thousands grouping, e.g. "6,500,000"
-      str = str.replace(/,/g, '');
-    } else {
-      // exactly one comma — thousands group only if followed by exactly 3
-      // digits ("1,200" → 1200); otherwise it's the decimal point ("12,5" → 12.5)
-      str = parts[1].length === 3 ? str.replace(',', '') : str.replace(',', '.');
-    }
-  }
-  const n = Number(str);
-  return isNaN(n) ? 0 : n;
-}
-
-// Plain number while focused (easy to type), comma-separated thousands once
-// you click away — used for every money field (giá cả/chi phí) for readability.
-function formatMoney(v) {
-  const n = Number(v) || 0;
-  return n === 0 ? '' : n.toLocaleString('en-US', { maximumFractionDigits: 4 });
-}
-function parseMoney(s) {
-  return parseFlexibleNumber(s);
-}
-function MoneyInput({ value, onChange, disabled }) {
-  // raw = null means "not focused" — display formatted value.
-  // When focused, raw holds exactly what the user is typing (including
-  // trailing dots like "11."), so we never strip the decimal mid-entry.
-  // We only parse → number on blur, avoiding the cursor-jump / dot-loss bug.
-  const [raw, setRaw] = useState(null);
-  const display = raw !== null ? raw : formatMoney(value);
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      value={display}
-      disabled={disabled}
-      onFocus={() => setRaw(value || value === 0 ? String(value) : '')}
-      onBlur={() => { onChange(parseMoney(raw ?? '')); setRaw(null); }}
-      onChange={e => setRaw(e.target.value)}
-    />
-  );
-}
-
-// Plain decimal number, no thousand separators shown on screen — for
-// C.W / G.W / CBM / VAT% / lãi suất and any other plain quantity that must
-// accept a decimal point. A native <input type="number"> bound straight to a
-// numeric value re-renders on every keystroke as Number(text), which
-// silently drops a trailing "." the instant it's typed (e.g. typing "12."
-// becomes "12" before you can add the fractional digits) — making decimal
-// entry feel impossible. Same focus/blur raw-string technique as MoneyInput
-// avoids that, and parseFlexibleNumber handles a comma typed as either a
-// decimal point (VN-locale phone keypads) or thousands grouping (e.g. G.W
-// entered as "1,200" kg).
-function formatDecimal(v) {
-  const n = Number(v) || 0;
-  return n === 0 ? '' : String(n);
-}
-function parseDecimal(s) {
-  return parseFlexibleNumber(s);
-}
-function DecimalInput({ value, onChange, disabled, placeholder }) {
-  const [raw, setRaw] = useState(null);
-  const display = raw !== null ? raw : formatDecimal(value);
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      placeholder={placeholder}
-      value={display}
-      disabled={disabled}
-      onFocus={() => setRaw(value || value === 0 ? String(value) : '')}
-      onBlur={() => { onChange(parseDecimal(raw ?? '')); setRaw(null); }}
-      onChange={e => setRaw(e.target.value)}
-    />
-  );
-}
 
 const TERMS = [
   'EXW', 'FCA', 'FAS', 'FOB',
@@ -191,13 +88,6 @@ function setPath(obj, path, val) {
   return next;
 }
 
-function PriceNote({ note }) {
-  if (!note) return null;
-  const text = note.direction === 'higher'
-    ? `Cao hơn giá đề xuất ${fmt(note.suggestedPrice)} (+${fmt(note.diff)})`
-    : `Thấp hơn giá đề xuất ${fmt(note.suggestedPrice)} (-${fmt(note.diff)})`;
-  return <div className={`price-note ${note.direction === 'higher' ? 'note-up' : 'note-down'}`} title="So với Dữ liệu nội bộ (giá đề xuất)">{text}</div>;
-}
 
 function ItemRow({ mode, side, pathPrefix, def, item, onChange, disabled }) {
   const note = side === 'selling' ? priceSuggestionNote(mode, def.key, item.price, item.unit) : null;
@@ -305,7 +195,7 @@ function ModeItemsTable({ side, mode, q, onChange, onAddCustom, onRemoveCustom, 
   );
 }
 
-const INTERNAL_MODE_TITLES = { fcl20: "FCL 20'", fcl40: "FCL 40'", lcl: 'LCL / LCL BCN', air: 'AIR' };
+const INTERNAL_MODE_TITLES = { fcl20: "FCL 20' (20GP)", fcl40: "FCL 40' (40GP / 40HC / 45HC)", lcl: 'LCL / LCL BCN', air: 'AIR' };
 
 function InternalDataPanel({ t }) {
   return (
@@ -314,7 +204,7 @@ function InternalDataPanel({ t }) {
         Dữ liệu nội bộ — bảng giá bán (tariff) đề xuất cho từng hạng mục, tham khảo khi báo giá.
         Nếu giá nhập ở bảng Giá bán khác với giá đề xuất, hệ thống sẽ hiện dòng nhắc nhở ngay dưới ô nhập.
       </p>
-      {MODES.map(mode => {
+      {['fcl20', 'fcl40', 'lcl', 'air'].map(mode => {
         const rows = Object.entries(TARIFF_SUGGEST[mode] || {});
         if (!rows.length) return null;
         const defs = itemDefsForMode(mode);
@@ -353,7 +243,12 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
   const router = useRouter();
   const { t } = useLang();
   const [q, setQ] = useState(() => migrateQuote(initialQuote || newQuoteData()));
-  const [tabMode, setTabMode] = useState('fcl20');
+  const [tabMode, setTabMode] = useState(() => {
+    const init = migrateQuote(initialQuote || newQuoteData());
+    if (init.dep === 'FEA' || init.dep === 'FIA') return 'air';
+    if (!(init.equipment || []).length && Number(init.lcl) > 0) return 'lcl';
+    return 'fcl';
+  });
   // Tỷ giá VND/USD hiển thị trong Công nợ/Chi phí khác không còn nhập tay —
   // luôn lấy theo bảng tỷ giá chung (trang Tỷ giá), tự cập nhật khi tỷ giá đổi.
   const liveExchangeRate = usdVndRateFromFx(systemFxRates || q.fxRates || DEFAULT_FX_RATES);
@@ -375,6 +270,18 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
   const r = useMemo(() => calcQuote(q), [q]);
 
   function onChange(path, val) { setQ(prev => setPath(prev, path, val)); }
+  // FCL matrix: recipe mutates a fresh clone of q[side].fcl
+  function onFclUpdate(side, recipe) {
+    setQ(prev => {
+      const next = structuredClone(prev);
+      if (!next[side].fcl) next[side].fcl = blankMode('fcl');
+      if (!next[side].fcl.customItems) next[side].fcl.customItems = [];
+      if (!next[side].fcl.overseasItems) next[side].fcl.overseasItems = [];
+      recipe(next[side].fcl);
+      return next;
+    });
+  }
+  function setEquipment(list) { setQ(prev => syncLegacyQty({ ...prev, equipment: list })); }
   function setField(key, val) { setQ(prev => ({ ...prev, [key]: val })); }
   function onAddCustom(side, mode) {
     setQ(prev => {
@@ -512,8 +419,10 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
               <div className="field"><label>{t('field.validUntil')}</label><input type="date" value={expiryDateInput(q.createdAt, q.validDays)} onChange={e => setField('validDays', expiryToValidDays(e.target.value, q.createdAt))} disabled={readonly} /></div>
             </div>
             <div className="grid grid-4">
-              <div className="field"><label>{t('field.qty20')}</label><input type="number" value={q.qty20 || 0} onChange={e => setField('qty20', Number(e.target.value) || 0)} disabled={readonly} /></div>
-              <div className="field"><label>{t('field.qty40')}</label><input type="number" value={q.qty40 || 0} onChange={e => setField('qty40', Number(e.target.value) || 0)} disabled={readonly} /></div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <EquipmentEditor equipment={q.equipment} onChange={setEquipment} disabled={readonly} />
+                <FclSpecsEditor equipment={q.equipment} specs={q.fclSpecs} onChange={v => setField('fclSpecs', v)} disabled={readonly} />
+              </div>
               <div className="field"><label>{t('field.lcl')}</label><DecimalInput value={q.lcl || 0} onChange={v => setField('lcl', v)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.weight')}</label><DecimalInput value={q.weight || 0} onChange={v => setField('weight', v)} disabled={readonly} /></div>
               <div className="field"><label>{t('field.cw')}</label><DecimalInput value={q.cw || 0} onChange={v => setField('cw', v)} disabled={readonly} /></div>
@@ -533,11 +442,16 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
               {MODES.map(m => <button type="button" key={m} className={tabMode === m ? 'active' : ''} onClick={() => setTabMode(m)}>{MODE_LABELS[m]}</button>)}
               <button type="button" className={tabMode === 'internal' ? 'active' : ''} onClick={() => setTabMode('internal')}>{t('tab.internalData')}</button>
             </div>
+            {tabMode === 'fcl' && (
+              <div className="fcl-mix-bar">
+                <b>Cơ cấu cont:</b> {equipmentLabel(q.equipment) || 'chưa có — thêm ở mục "Cơ cấu container" phía trên'}
+              </div>
+            )}
             {tabMode !== 'internal' && (
               <>
                 <h3>{t('sec1.title')}</h3>
                 <div className="helptext" style={{ marginBottom: 8 }}>{t('table.overseasNote')}</div>
-                <SwipeCarousel panels={[
+                <SwipeCarousel className={tabMode === 'fcl' ? 'stacked' : ''} panels={[
                   {
                     key: 'overseas-buying',
                     label: t('sec2.title').replace(/^II\.\s*/, ''),
@@ -545,7 +459,9 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
                       <>
                         <div className="sum-section-title">{t('sec2.title').replace(/^II\.\s*/, '')}</div>
                         <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                          <OverseasItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />
+                          {tabMode === 'fcl'
+                            ? <FclMatrixTable side="buying" kind="overseas" q={q} onUpdate={onFclUpdate} disabled={feesReadonly} t={t} />
+                            : <OverseasItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />}
                         </fieldset>
                       </>
                     ),
@@ -557,7 +473,9 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
                       <>
                         <div className="sum-section-title">{t('sec3.title').replace(/^III\.\s*/, '')}</div>
                         <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                          <OverseasItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />
+                          {tabMode === 'fcl'
+                            ? <FclMatrixTable side="selling" kind="overseas" q={q} onUpdate={onFclUpdate} disabled={feesReadonly} t={t} />
+                            : <OverseasItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddOverseas={onAddOverseas} onRemoveOverseas={onRemoveOverseas} disabled={feesReadonly} t={t} />}
                         </fieldset>
                       </>
                     ),
@@ -568,7 +486,7 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
             {tabMode === 'internal' ? (
               <InternalDataPanel t={t} />
             ) : (
-              <SwipeCarousel panels={[
+              <SwipeCarousel className={tabMode === 'fcl' ? 'stacked' : ''} panels={[
                 {
                   key: 'costing',
                   label: t('sec2.title'),
@@ -576,7 +494,9 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
                     <>
                       <h3>{t('sec2.title')}</h3>
                       <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                        <ModeItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
+                        {tabMode === 'fcl'
+                          ? <FclMatrixTable side="buying" kind="charges" q={q} onUpdate={onFclUpdate} disabled={feesReadonly} t={t} />
+                          : <ModeItemsTable side="buying" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />}
                       </fieldset>
                     </>
                   ),
@@ -588,7 +508,9 @@ export default function QuoteForm({ initialQuote, quoteId, currentUser, systemFx
                     <>
                       <h3>{t('sec3.title')}</h3>
                       <fieldset disabled={feesReadonly} style={{ border: 'none', padding: 0, margin: 0 }}>
-                        <ModeItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />
+                        {tabMode === 'fcl'
+                          ? <FclMatrixTable side="selling" kind="charges" q={q} onUpdate={onFclUpdate} disabled={feesReadonly} t={t} />
+                          : <ModeItemsTable side="selling" mode={tabMode} q={q} onChange={onChange} onAddCustom={onAddCustom} onRemoveCustom={onRemoveCustom} disabled={feesReadonly} t={t} />}
                       </fieldset>
                     </>
                   ),

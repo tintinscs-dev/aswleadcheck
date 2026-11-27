@@ -209,3 +209,42 @@ textarea.note{width:100%;min-height:60px;padding:8px;border:1px solid var(--bord
 .flex-between{display:flex;justify-content:space-between;align-items:center;}
 .section-collapse{cursor:pointer;user-select:none;}
 .userlist-row{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+
+/* ── FCL container mix + price matrix ─────────────────────────────────────── */
+.equipment-editor .eq-chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;}
+.eq-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 4px;border:1px solid var(--border);border-radius:8px;background:#f4f7fb;font-size:13px;}
+.eq-chip input{width:58px;padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:13px;text-align:right;}
+.eq-chip button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 2px;}
+.eq-chip.eq-rf{background:#e6f6fb;border-color:#9fd6e8;}
+.eq-chip.eq-ot,.eq-chip.eq-fr{background:#fff3d6;border-color:#f0cf86;}
+.eq-chip.eq-tank{background:#efe9fb;border-color:#c9b8ef;}
+.eq-x{color:var(--muted);font-size:12px;}
+.eq-tools{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;}
+.eq-add,.eq-paste{display:inline-flex;gap:6px;align-items:center;}
+.eq-add input{width:58px;padding:6px;border:1px solid var(--border);border-radius:5px;text-align:right;}
+.eq-add select{padding:6px;border:1px solid var(--border);border-radius:5px;}
+.eq-paste input{width:280px;max-width:60vw;padding:6px 8px;border:1px solid var(--border);border-radius:5px;}
+.fcl-specs{margin-top:6px;padding:8px 10px 0;border-left:3px solid #9fd6e8;background:#fafcfe;border-radius:4px;}
+.fcl-mix-bar{margin:-4px 0 10px;padding:6px 10px;background:#f4f7fb;border-radius:6px;font-size:13px;}
+.fcl-toolbar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin-bottom:8px;font-size:12.5px;}
+.fcl-toolbar span{display:inline-flex;gap:6px;align-items:center;}
+.fcl-toolbar select{padding:4px 6px;border:1px solid var(--border);border-radius:5px;font-size:12.5px;}
+.fcl-matrix th.num,.fcl-matrix td.num{text-align:right;}
+.fcl-matrix .th-sub{font-weight:500;font-size:10.5px;color:var(--muted);}
+.fcl-matrix td.na-cell{text-align:center;color:#c3cad5;padding-top:12px;}
+.fcl-matrix td.lt{padding-top:12px;}
+@media(max-width:768px){
+  .fcl-matrix td.na-cell{display:none;}
+  .eq-paste input{width:100%;}
+}
+
+/* A <fieldset> defaults to min-width:min-content, which let wide item tables push the
+   panel wider than its grid column instead of scrolling inside .item-table-wrap. */
+.swipe-panel fieldset,.card fieldset{min-width:0;}
+/* FCL matrix is wide — stack Giá mua / Giá bán full-width instead of side by side. */
+.swipe-carousel.stacked .swipe-track{grid-template-columns:1fr;}
+@media(max-width:768px){.swipe-carousel.stacked .swipe-track{display:flex;}}
+.fcl-matrix{min-width:var(--fcl-min,640px);}
+@media(max-width:768px){.item-table.fcl-matrix{min-width:0;}}
+.layout-form>div{min-width:0;}
+.fcl-toolbar span{flex-wrap:wrap;}

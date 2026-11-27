@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../../../lib/db';
 import { requireUser } from '../../../../../lib/serverAuth';
-import { DEFAULT_FX_RATES, usdVndRateFromFx } from '../../../../../lib/calc';
+import { DEFAULT_FX_RATES, usdVndRateFromFx, toDbQuoteData } from '../../../../../lib/calc';
 import { sendTelegram, quoteNotifyText } from '../../../../../lib/telegram';
 import { sendEmailNotification } from '../../../../../lib/email';
 import { can } from '../../../../../lib/permissions';
@@ -57,7 +57,7 @@ export async function POST(req, { params }) {
     const fxRates = await currentFxRates();
     const exchangeRate = usdVndRateFromFx(fxRates);
     const { id: _id, createdAt: _c, updatedAt: _u, createdBy: _cb, createdById: _cbi, ...rest } = proposal.data || {};
-    data = { ...rest, fxRates, exchangeRate, status: 'approved', history, pendingAdjustment: null };
+    data = toDbQuoteData({ ...rest, fxRates, exchangeRate, status: 'approved', history, pendingAdjustment: null });
   } else {
     data = { history, pendingAdjustment: null };
   }
